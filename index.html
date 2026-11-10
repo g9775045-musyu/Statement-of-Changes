@@ -301,10 +301,6 @@
           <i data-lucide="sparkles" class="w-4 h-4"></i>
           <span>샘플 불러오기</span>
         </button>
-        <button id="openDeployModalBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-600/90 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950/20 transition cursor-pointer" title="무료 웹 배포 방법 안내 보기">
-          <i data-lucide="rocket" class="w-4 h-4"></i>
-          <span class="hidden md:inline">배포 방법 안내</span>
-        </button>
         <button id="resetAllBtn" type="button" class="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 transition cursor-pointer" title="모두 초기화">
           <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
           <span class="hidden md:inline">초기화</span>
@@ -713,91 +709,6 @@
       <p class="font-medium text-slate-600">v1.3.0 · 지원 문서: TXT · PDF · DOCX · HWP(v5) · HWPX (병합 표 · 부칙 별도 비교 지원)</p>
     </div>
   </footer>
-
-  <!-- 무료 웹 배포 및 업데이트 방법 안내 모달창 -->
-  <div id="deployGuideModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
-    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-5">
-      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-            <i data-lucide="rocket" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="text-lg font-bold text-slate-900">웹앱 배포 · 최신 버전(v1.3.0) 업데이트 안내</h3>
-            <p class="text-xs text-slate-500">바탕화면 <code class="bg-slate-100 px-1 rounded">CTLR</code> 폴더의 파일로 GitHub 및 Netlify에 즉시 반영할 수 있습니다.</p>
-          </div>
-        </div>
-        <button id="closeDeployModalBtn" type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="space-y-4 text-xs sm:text-sm text-slate-700 leading-relaxed">
-        <!-- 현재 프로젝트 파일 및 저장소 요약 -->
-        <div class="p-3.5 rounded-xl bg-slate-100/80 border border-slate-200 space-y-1">
-          <div class="font-bold text-slate-800 flex items-center gap-1.5">
-            <i data-lucide="folder-check" class="w-4 h-4 text-blue-600"></i>
-            <span>현재 앱 폴더 위치 및 파일 구성 (<code class="bg-white px-1.5 py-0.5 rounded border">c:\Users\user\Desktop\CTLR</code>)</span>
-          </div>
-          <p class="text-xs text-slate-600">
-            폴더 내 <code class="bg-white px-1 rounded border font-semibold">index.html</code>(단독 실행 통합본), <code class="bg-white px-1 rounded border">style.css</code>, <code class="bg-white px-1 rounded border">app.js</code>, <code class="bg-white px-1 rounded border">README.md</code> 4개 파일로 구성되어 있습니다.
-          </p>
-        </div>
-
-        <!-- 방법 1: GitHub + Netlify 자동 연동 업데이트 -->
-        <div class="p-4 rounded-xl bg-blue-50/70 border border-blue-200 space-y-2">
-          <h4 class="font-bold text-blue-950 flex items-center gap-1.5">
-            <span class="px-2 py-0.5 rounded bg-blue-600 text-white text-xs">방법 1 (추천)</span>
-            GitHub 저장소에 덮어쓰기 &rarr; Netlify 자동 배포
-          </h4>
-          <ol class="list-decimal list-inside space-y-1.5 text-slate-700">
-            <li>
-              연결된 GitHub 저장소(<a href="https://github.com/g9775045-musyu/Statement-of-Changes" target="_blank" rel="noopener" class="text-blue-700 font-bold underline">github.com/g9775045-musyu/Statement-of-Changes</a>)에 접속합니다.
-            </li>
-            <li>
-              화면 오른쪽 위 <strong class="text-slate-900">Add file &rarr; Upload files</strong> 버튼을 클릭합니다.
-            </li>
-            <li>
-              바탕화면 <code class="bg-white px-1.5 py-0.5 rounded border font-semibold">CTLR</code> 폴더 안의 파일 4개(<code class="bg-white px-1 rounded border">index.html</code>, <code class="bg-white px-1 rounded border">style.css</code>, <code class="bg-white px-1 rounded border">app.js</code>, <code class="bg-white px-1 rounded border">README.md</code>)를 드래그하여 올린 뒤 하단 초록색 <strong class="text-emerald-700">Commit changes</strong> 버튼을 누릅니다.
-            </li>
-            <li>
-              GitHub와 연결된 <strong>Netlify 사이트가 약 15~30초 뒤에 자동으로 최신 버전으로 업데이트</strong>됩니다!
-            </li>
-          </ol>
-        </div>
-
-        <!-- 방법 2: Netlify 수동 폴더 드래그 앤 드롭 업데이트 -->
-        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-          <h4 class="font-bold text-slate-900 flex items-center gap-1.5">
-            <span class="px-2 py-0.5 rounded bg-slate-800 text-white text-xs">방법 2 (수동 배포 시)</span>
-            Netlify 대시보드에서 폴더째 드래그하여 즉시 업데이트
-          </h4>
-          <ol class="list-decimal list-inside space-y-1.5 text-slate-700">
-            <li><a href="https://app.netlify.com" target="_blank" rel="noopener" class="text-blue-700 font-bold underline">app.netlify.com</a> 에 로그인한 뒤 기존에 만든 사이트를 선택합니다.</li>
-            <li>상단 또는 왼쪽 메뉴에서 <strong class="text-slate-900">Deploys</strong> 탭을 클릭합니다.</li>
-            <li>GitHub 연동 사이트라면 <strong class="text-slate-900">Trigger deploy &rarr; Deploy site</strong>를 누르고, 수동 업로드 사이트라면 화면 아래쪽 점선 상자(<code class="bg-white px-1 rounded">Drag and drop your site output folder here</code>)에 바탕화면의 <code class="bg-white px-1.5 py-0.5 rounded border font-semibold">CTLR</code> 폴더를 통째로 끌어다 놓으면 5초 만에 반영됩니다.</li>
-          </ol>
-        </div>
-
-        <!-- 방법 3: 학교·기관 내부망 파일 직접 공유 -->
-        <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-          <h4 class="font-bold text-emerald-950 flex items-center gap-1.5">
-            <span class="px-2 py-0.5 rounded bg-emerald-600 text-white text-xs">방법 3 (파일 직접 공유)</span>
-            학교·기관 메신저(쿨메신저 등)로 <code class="bg-white px-1.5 py-0.5 rounded border text-emerald-900">index.html</code> 파일 전달
-          </h4>
-          <p class="text-slate-700">
-            별도의 프로그램(Python 등) 설치 없이 <code class="bg-white px-1.5 py-0.5 rounded border font-semibold">index.html</code> 파일 하나만 동료 교직원에게 보내주시면, 받는 분 컴퓨터에서 <strong>더블클릭만으로 크롬·엣지 브라우저에서 즉시 실행</strong>됩니다. 입력한 조문과 업로드한 문서는 외부 서버로 전송되지 않고 사용자 컴퓨터(브라우저) 안에서만 안전하게 처리됩니다.
-          </p>
-        </div>
-      </div>
-
-      <div class="flex justify-end pt-2 border-t border-slate-100">
-        <button id="closeDeployModalBottomBtn" type="button" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-900 text-white hover:bg-slate-800 cursor-pointer">
-          확인
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- 우측 하단 알림 메시지(토스트)가 표시될 컨테이너 -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
@@ -3158,17 +3069,6 @@
       document.getElementById('quickSchoolSampleBtn').addEventListener('click', () => {
         document.getElementById('samplePresetSelect').value = 'school';
         loadSelectedSample();
-      });
-
-      // 배포 안내 모달창 열기/닫기
-      const deployModal = document.getElementById('deployGuideModal');
-      const openDeployModal = () => deployModal.classList.remove('hidden');
-      const closeDeployModal = () => deployModal.classList.add('hidden');
-      document.getElementById('openDeployModalBtn').addEventListener('click', openDeployModal);
-      document.getElementById('closeDeployModalBtn').addEventListener('click', closeDeployModal);
-      document.getElementById('closeDeployModalBottomBtn').addEventListener('click', closeDeployModal);
-      deployModal.addEventListener('click', (e) => {
-        if (e.target === deployModal) closeDeployModal();
       });
 
       // 옵션 변경 시 즉시 표 다시 생성

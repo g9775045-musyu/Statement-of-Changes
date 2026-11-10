@@ -2354,17 +2354,6 @@
         loadSelectedSample();
       });
 
-      // 배포 안내 모달창 열기/닫기
-      const deployModal = document.getElementById('deployGuideModal');
-      const openDeployModal = () => deployModal.classList.remove('hidden');
-      const closeDeployModal = () => deployModal.classList.add('hidden');
-      document.getElementById('openDeployModalBtn').addEventListener('click', openDeployModal);
-      document.getElementById('closeDeployModalBtn').addEventListener('click', closeDeployModal);
-      document.getElementById('closeDeployModalBottomBtn').addEventListener('click', closeDeployModal);
-      deployModal.addEventListener('click', (e) => {
-        if (e.target === deployModal) closeDeployModal();
-      });
-
       // 옵션 변경 시 즉시 표 다시 생성
       const optionIds = [
         'optRevisionType', 'optUnchangedStyle', 'optUnchangedOldStyle',
