@@ -1,0 +1,214 @@
+﻿    body {
+      font-family: 'Pretendard', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      word-break: keep-all;
+    }
+
+    /* 공식 법조문 신구대조표 서체 모드 (바탕체 vs 고딕체) */
+    .legal-table-container.font-mode-serif .legal-table {
+      font-family: 'Noto Serif KR', '바탕', 'Batang', serif;
+    }
+    .legal-table-container.font-mode-sans .legal-table {
+      font-family: 'Pretendard', '맑은 고딕', 'Malgun Gothic', sans-serif;
+    }
+
+    /* 신구대조표 기본 테두리 및 레이아웃 (좌우 50:50 고정, 상하 굵은 선) */
+    .legal-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-top: 2px solid #0f172a;
+      border-bottom: 2px solid #0f172a;
+      background: #ffffff;
+      table-layout: fixed;
+    }
+
+    .legal-table > thead > tr > th {
+      border-bottom: 1.5px solid #0f172a;
+      border-left: 1px solid #334155;
+      border-right: 1px solid #334155;
+      padding: 12px 16px;
+      background-color: #f8fafc;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.35em;
+      text-align: center;
+      color: #0f172a;
+    }
+
+    .legal-table > thead > tr > th:first-child {
+      border-left: none;
+    }
+    .legal-table > thead > tr > th:last-child {
+      border-right: none;
+    }
+
+    .legal-table > tbody > tr > td {
+      border-top: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+      border-left: 1px solid #64748b;
+      border-right: 1px solid #64748b;
+      padding: 14px 18px;
+      vertical-align: top;
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: #111827;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    .legal-table > tbody > tr > td:first-child {
+      border-left: none;
+    }
+    .legal-table > tbody > tr > td:last-child {
+      border-right: none;
+    }
+
+    .legal-table > tbody > tr:hover > td {
+      background-color: #fcfdff;
+    }
+
+    /* ==========================================================================
+       [신규 추가] 조문 내부에 포함된 중첩 표(.inner-legal-table) 전용 스타일
+       ========================================================================== */
+    .clause-table-wrap {
+      margin: 8px 0 10px 0;
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .inner-legal-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #334155;
+      margin: 4px 0;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      background-color: #ffffff;
+      table-layout: auto;
+    }
+
+    .inner-legal-table th,
+    .inner-legal-table td {
+      border: 1px solid #475569;
+      padding: 6px 10px;
+      vertical-align: middle;
+      text-align: center;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    .inner-legal-table tr:first-child th,
+    .inner-legal-table thead th {
+      background-color: #f1f5f9;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* 변경된 어구에 긋는 밑줄(u.diff-u) 스타일 */
+    u.diff-u {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-thickness: 1.5px;
+      font-weight: 500;
+    }
+
+    /* 화면 검수용 형광펜 강조 보기 활성화 시 스타일 */
+    .highlight-mode u.diff-u {
+      background-color: #fef08a;
+      text-decoration-color: #b91c1c;
+      color: #991b1b;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+
+    .highlight-mode u.diff-u-old {
+      background-color: #fee2e2;
+      text-decoration-color: #dc2626;
+      color: #991b1b;
+      padding: 0 2px;
+      border-radius: 2px;
+    }
+
+    /* 조(제N조) · 항(①) · 호(1.) · 목(가.) 단계별 내어쓰기 및 들여쓰기 */
+    .clause-line {
+      margin-bottom: 4px;
+      text-indent: -1.4em;
+      padding-left: 1.4em;
+    }
+    .clause-line.level-article {
+      text-indent: 0;
+      padding-left: 0;
+      margin-bottom: 6px;
+    }
+    .clause-line.level-hang {
+      text-indent: -1.35em;
+      padding-left: 1.35em;
+    }
+    .clause-line.level-ho {
+      text-indent: -1.4em;
+      padding-left: 2.4em;
+    }
+    .clause-line.level-mok {
+      text-indent: -1.4em;
+      padding-left: 3.4em;
+    }
+
+    /* 표 직접 편집 모드가 켜졌을 때 포커스 테두리 표시 */
+    .legal-table.editable-active td {
+      outline: none;
+      cursor: text;
+    }
+    .legal-table.editable-active td:focus {
+      background-color: #eff6ff;
+      box-shadow: inset 0 0 0 2px #3b82f6;
+    }
+
+    /* 파일 드래그 앤 드롭 시 테두리 강조 효과 */
+    .drop-zone.drag-over {
+      border-color: #2563eb !important;
+      background-color: #eff6ff !important;
+    }
+
+    /* 스크롤바 깔끔하게 꾸미기 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 인쇄 또는 PDF 저장 시 불필요한 버튼 숨김 처리 */
+    @media print {
+      body {
+        background: #ffffff !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-area {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      .legal-table tr {
+        page-break-inside: avoid;
+      }
+      .highlight-mode u.diff-u,
+      .highlight-mode u.diff-u-old {
+        background-color: transparent !important;
+        color: #000000 !important;
+        text-decoration-color: #000000 !important;
+      }
+    }

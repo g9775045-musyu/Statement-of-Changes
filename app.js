@@ -1,0 +1,2459 @@
+﻿    // PDF.js 워커(Worker) 경로 설정 (PDF 텍스트 추출에 필요)
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    /* ==========================================================================
+       1. 샘플 데이터 프리셋 (법령, 자치법규·조례, 학교규정[샘플3 - 조문 내 표 비교 포함])
+       - 샘플3(학교 규정)의 제7조에 실제 표(| 구분 | ... |)가 포함되어 있어 표 비교를 바로 확인할 수 있습니다.
+       ========================================================================== */
+    const SAMPLE_PRESETS = {
+      law: {
+        title: '신·구조문대비표 (개인정보 보호 및 정보보안 규정 일부개정안)',
+        oldText: `제1조(목적) 이 규정은 공공기관의 정보보호 및 개인정보의 안전한 관리에 필요한 사항을 규정함을 목적으로 한다.
+
+제2조(정의) 이 규정에서 사용하는 용어의 뜻은 다음과 같다.
+1. "개인정보"란 살아 있는 개인에 관한 정보로서 성명, 주민등록번호 등을 통하여 개인을 알아볼 수 있는 정보를 말한다.
+2. "정보시스템"이란 정보의 수집·가공·저장·검색·송신·수신에 활용되는 기기와 소프트웨어의 조직화된 체계를 말한다.
+3. "보안담당관"이란 기관 내 정보보안 업무를 총괄하는 부서의 장을 말한다.
+
+제3조(적용범위) 이 규정은 본부 및 소속기관의 모든 임직원에게 적용한다.
+
+제4조(개인정보 보호책임자의 지정) ① 기관장은 개인정보 처리에 관한 업무를 총괄해서 책임질 개인정보 보호책임자를 지정하여야 한다.
+② 개인정보 보호책임자는 경력 5년 이상의 부장급 직원으로 보한다.
+③ 개인정보 보호책임자는 연 1회 이상 정기 실태점검을 실시하여야 한다.
+
+제5조(보안심의위원회 운영) ① 정보보안에 관한 중요 사항을 심의하기 위하여 보안심의위원회를 둔다.
+② 위원회는 위원장 1명을 포함한 5명 이내의 위원으로 구성한다.
+③ 위원회의 회의는 재적위원 과반수의 출석으로 개의한다.
+
+제6조(수기문서 보관 특례) 모든 전자문서는 출력하여 종이 문서 형태로 이중 보관하여야 한다.
+
+제7조(비밀유지의무) 임직원은 직무상 알게 된 개인정보를 누설하거나 권한 없이 처리하여서는 아니 된다.`,
+        newText: `제1조(목적) 이 규정은 공공기관의 인공지능·디지털 정보보호 및 개인정보의 안전한 관리·활용에 필요한 사항을 규정함을 목적으로 한다.
+
+제2조(정의) 이 규정에서 사용하는 용어의 뜻은 다음과 같다.
+1. "개인정보"란 살아 있는 개인에 관한 정보로서 성명, 주민등록번호, 영상정보 등을 통하여 개인을 알아볼 수 있는 정보를 말한다.
+2. "정보시스템"이란 정보의 수집·가공·저장·검색·송신·수신에 활용되는 기기와 소프트웨어의 조직화된 체계를 말한다.
+3. "최고보안책임자"란 기관 내 정보보안 및 데이터 보안 업무를 총괄하는 본부장급 임원을 말한다.
+4. "생성형 인공지능"이란 입력된 데이터를 기반으로 텍스트·이미지 등의 결과물을 생성하는 인공지능 시스템을 말한다.
+
+제3조(적용범위) 이 규정은 본부 및 소속기관의 모든 임직원에게 적용한다.
+
+제4조(개인정보 보호책임자의 지정) ① 기관장은 개인정보 처리에 관한 업무를 총괄해서 책임질 개인정보 보호책임자를 지정하여야 한다.
+② 개인정보 보호책임자는 경력 7년 이상의 실장급 또는 본부장급 임직원으로 보한다.
+④ 개인정보 보호책임자는 침해사고 발생 시 지체 없이 대응조치를 취하여야 한다.
+
+제5조(보안심의위원회 운영) ① 정보보안에 관한 중요 사항을 심의하기 위하여 보안심의위원회를 둔다.
+② 위원회는 위원장 1명을 포함한 9명 이내의 위원으로 구성한다.
+③ 위원회의 회의는 재적위원 과반수의 출석으로 개의하고, 출석위원 과반수의 찬성으로 의결한다.
+
+제7조(비밀유지의무) 임직원은 직무상 알게 된 개인정보를 누설하거나 권한 없이 처리하여서는 아니 된다.
+
+제8조(클라우드 및 인공지능 보안관리) ① 임직원이 외부 생성형 인공지능 서비스를 업무에 활용하려는 경우 사전에 최고보안책임자의 보안성 검토를 받아야 한다.
+② 비공개 행정정보 및 민감정보는 외부 상용 인공지능에 입력하여서는 아니 된다.`,
+        oldAddendum: `부칙 <제2023-11호, 2023. 5. 1.>
+제1조(시행일) 이 규정은 2023년 5월 1일부터 시행한다.`,
+        newAddendum: `부칙 <제2026-4호, 2026. 10. 1.>
+제1조(시행일) 이 규정은 2026년 10월 1일부터 시행한다.
+제2조(개인정보 보호책임자에 관한 경과조치) 이 규정 시행 당시 종전의 규정에 따라 지정된 개인정보 보호책임자는 이 규정에 따라 지정된 것으로 본다.`
+      },
+
+      ordinance: {
+        title: '신·구조문대비표 (청년 기본 조례 및 행정규칙 일부개정조례안)',
+        oldText: `제1조(목적) 이 조례는 청년의 권익증진과 발전 및 자립기반 형성에 필요한 사항을 규정함을 목적으로 한다.
+
+제2조(정의) 이 조례에서 사용하는 용어의 뜻은 다음과 같다.
+1. "청년"이란 19세 이상 34세 이하인 사람을 말한다.
+2. "청년정책"이란 청년의 정치·경제·사회·문화 등 모든 분야에서의 참여 확대와 권익 증진을 목적으로 하는 시책을 말한다.
+
+제3조(책무) 지방자치단체의 장은 청년정책을 적극 발굴하고 추진하여야 한다.
+
+제4조(청년정책위원회) ① 청년정책에 관한 주요 사항을 심의하기 위하여 청년정책위원회를 둔다.
+② 위원회는 위원장 1명을 포함하여 15명 이내의 위원으로 구성한다.
+③ 위촉직 위원의 임기는 2년으로 하며, 한 차례만 연임할 수 있다.
+
+제5조(청년활동 지원) ① 지방자치단체의 장은 청년의 역량 강화를 위하여 다음 각 호의 사업을 지원할 수 있다.
+1. 청년 일자리 창출 및 창업 지원 사업
+2. 청년 주거안정 및 생활안정 지원 사업
+3. 청년 오프라인 모임 공간 대관 사업`,
+        newText: `제1조(목적) 이 조례는 청년의 권익증진과 삶의 질 향상 및 자립기반 형성에 필요한 사항을 규정함을 목적으로 한다.
+
+제2조(정의) 이 조례에서 사용하는 용어의 뜻은 다음과 같다.
+1. "청년"이란 19세 이상 39세 이하인 사람을 말한다.
+2. "청년정책"이란 청년의 정치·경제·사회·문화 등 모든 분야에서의 참여 확대와 권익 증진을 목적으로 하는 시책을 말한다.
+
+제3조(책무) 지방자치단체의 장은 청년정책을 적극 발굴하고 추진하여야 한다.
+
+제4조(청년정책위원회) ① 청년정책에 관한 주요 사항을 심의하기 위하여 청년정책위원회를 둔다.
+② 위원회는 위원장 1명을 포함하여 20명 이내의 위원으로 구성하되, 청년 위원을 과반수 위촉하여야 한다.
+③ 위촉직 위원의 임기는 2년으로 한다.
+
+제5조(청년활동 지원) ① 지방자치단체의 장은 청년의 역량 강화를 위하여 다음 각 호의 사업을 지원할 수 있다.
+1. 청년 디지털 일자리 창출 및 창업 지원 사업
+2. 청년 주거안정, 금융교육 및 마음건강 지원 사업
+
+제6조(청년센터의 설치·운영) ① 지방자치단체의 장은 청년정책의 원활한 추진과 청년 활동 지원을 위하여 청년센터를 설치·운영할 수 있다.
+② 청년센터의 운영에 필요한 경비는 예산의 범위에서 지원할 수 있다.`,
+        oldAddendum: `부칙 <제2022-8호, 2022. 7. 1.>
+이 조례는 공포한 날부터 시행한다.`,
+        newAddendum: `부칙 <제2026-12호, 2026. 11. 1.>
+제1조(시행일) 이 조례는 공포한 날부터 시행한다.
+제2조(청년 연령 확대에 따른 경과조치) 제2조제1호의 개정규정은 이 조례 시행 후 최초로 공고하는 청년지원 사업부터 적용한다.`
+      },
+
+      school: {
+        title: '신·구조문대비표 (학교 규정, 학칙 일부개정안)',
+        oldText: `제1조(목적) 이 규정은 본교 학생이 학교생활을 함에 있어 준수해야 할 제반 사항을 규정하여 민주 시민으로서의 자질을 함양함을 목적으로 한다.
+
+제2조(기본원칙) ① 학생의 인권과 교원의 교육권은 상호 존중되어야 한다.
+② 학교규정의 제정 및 개정은 학생, 학부모, 교원의 의견을 수렴하여 학교운영위원회의 심의를 거쳐 학교장이 확정한다.
+
+제3조(복장 및 두발) ① 학생은 지정된 동복 및 하복 교복을 단정하게 착용하여야 하며, 임의로 변형하여서는 아니 된다.
+② 두발은 단정하게 유지하며 파마와 염색은 일절 금지한다.
+③ 체육 수업이 있는 날에도 등교 시에는 반드시 정장 교복을 착용하여야 한다.
+
+제4조(휴대전화 등 전자기기의 소지 및 사용) ① 학생은 등교 즉시 담임교사에게 휴대전화를 일괄 제출하여야 하며 종례 전까지 소지할 수 없다.
+② 수업 시간 중 모든 전자기기의 사용을 엄격히 금지한다.
+
+제5조(학생자치회 활동) ① 학생의 자치역량 함양을 위하여 학급학생회와 전교학생자치회를 둔다.
+② 학교장은 학생자치회 운영에 필요한 공간과 예산을 지원할 수 있다.
+
+제6조(불시 소지품 일괄 검사) 교사는 학생 지도를 위하여 필요한 경우 학급 전체 학생의 가방 및 소지품을 일괄 검사할 수 있다.
+
+제7조(출석인정 결석 및 선도 기준) ① 학교장은 다음 표의 사유로 결석한 경우 출석으로 인정한다.
+| 구분 | 대상 및 사유 | 인정 일수 | 제출 서류 |
+| 경조사 | 부모·조부모 사망 | 5일 | 가족관계증명서 |
+| ^^ | 형제·자매 사망 | 1일 | 가족관계증명서 |
+| 현장체험학습 | 국내·외 교외체험학습 | 연간 10일 이내 | 신청서 및 보고서 |
+| 감염병 | 법정 감염병 확진 및 격리 | 격리 해제 시까지 | 진료확인서 |
+② 징계를 할 때에는 학생과 보호자에게 의견 진술의 기회를 부여하여야 한다.`,
+        newText: `제1조(목적) 이 규정은 본교 학생의 인권을 보장하고 학교생활을 함에 있어 준수해야 할 사항을 민주적 절차에 따라 규정하여 자율과 책임에 바탕을 둔 민주시민의 자질을 함양함을 목적으로 한다.
+
+제2조(기본원칙) ① 학생의 인권과 교원의 교육권은 상호 존중되어야 한다.
+② 학교규정의 제정 및 개정은 학생, 학부모, 교원의 의견을 수렴하여 학교운영위원회의 심의를 거쳐 학교장이 확정한다.
+
+제3조(복장 및 두발) ① 학생은 학교생활에 불편함이 없도록 교복(정장교복, 생활복, 체육복)을 자율적으로 선택하여 단정하게 착용한다.
+② 두발의 길이와 형태는 학생의 자율에 맡기며, 두발에 대한 획기적인 제한을 두지 아니한다.
+
+제4조(휴대전화 등 전자기기의 소지 및 사용) ① 학생은 수업 중 학습 활동과 무관한 휴대전화 등 전자기기의 사용을 자제하여야 한다.
+② 교사는 교육활동 및 디지털 기반 수업을 위하여 필요한 경우 전자기기의 사용을 허용할 수 있다.
+③ 수업 방해 등 교육활동을 심각하게 침해하는 경우 교사는 관련 법령 및 학칙에 따라 주의를 주거나 별도 보관 조치를 할 수 있다.
+
+제5조(학생자치회 활동) ① 학생의 자치역량 함양을 위하여 학급학생회와 전교학생자치회를 둔다.
+② 학교장은 학생자치회 운영에 필요한 공간과 예산을 지원하여야 하며, 학교규정 개정 시 학생자치회의 발의권을 보장한다.
+
+제7조(출석인정 결석 및 선도 기준) ① 학교장은 다음 표의 사유로 결석한 경우 출석으로 인정한다.
+| 구분 | 대상 및 사유 | 인정 일수 | 제출 서류 |
+| 경조사 | 부모·조부모 사망 | 5일 | 가족관계증명서 |
+| ^^ | 형제·자매 사망 | 3일 | 가족관계증명서 또는 주민등록등본 |
+| 현장체험학습 | 국내·외 자율형 교외체험학습 | 연간 20일 이내 | 신청서 및 결과보고서 |
+| 감염병 | 법정 감염병 확진 및 격리 | 격리 해제 시까지 | 진료확인서 또는 격리통지서 |
+| 생리결석 | 생리통으로 인한 결석 | 월 1일 | 학부모 확인서 |
+② 징계를 할 때에는 학생과 보호자에게 의견 진술의 기회를 부여하여야 한다.
+
+제8조(디지털 시민교육 및 사이버폭력 예방) ① 학교장은 학생의 올바른 디지털 미디어 활용과 사이버폭력 예방을 위하여 학기별 1회 이상 예방교육을 실시한다.
+② 학생은 타인의 초상권과 개인정보를 침해하는 불법 촬영물 또는 합성물을 제작·유포하여서는 아니 된다.`,
+        oldAddendum: `부칙 <제2024-2호, 2024. 3. 1.>
+제1조(시행일) 이 규정은 2024년 3월 1일부터 시행한다.
+제2조(경과조치) 이 규정 시행 당시 종전의 규정에 따라 행한 학생 선도 처분은 이 규정에 따른 것으로 본다.`,
+        newAddendum: `부칙 <제2026-5호, 2026. 9. 1.>
+제1조(시행일) 이 규정은 공포한 날부터 시행한다. 다만, 제7조제1항의 개정규정은 2027년 3월 1일부터 시행한다.
+제2조(경과조치) 이 규정 시행 당시 종전의 규정에 따라 진행 중인 학생생활교육위원회 심의 안건은 종전의 규정에 따른다.
+제3조(다른 규정의 개정) 본교 학생생활평점제 운영규정 제4조 중 "일괄 소지품 검사"를 "교육적 생활지도"로 한다.`
+      }
+    };
+
+    /* ==========================================================================
+       2. 토스트(Toast) 알림창 시스템
+       - 화면 우측 하단에 부드럽게 나타났다가 사라지는 안내 메시지 함수입니다.
+       ========================================================================== */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+
+      const colors = {
+        success: 'bg-slate-900 text-white border-emerald-500',
+        info: 'bg-slate-900 text-white border-blue-500',
+        warn: 'bg-amber-900 text-white border-amber-400',
+        error: 'bg-rose-950 text-white border-rose-500'
+      };
+      const icons = {
+        success: 'check-circle-2',
+        info: 'info',
+        warn: 'alert-triangle',
+        error: 'alert-circle'
+      };
+
+      toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border-l-4 ${colors[type] || colors.info} text-xs sm:text-sm transition-all duration-300 opacity-0 translate-y-2`;
+      toast.innerHTML = `
+        <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0 text-emerald-400"></i>
+        <span class="flex-1 font-medium leading-snug">${message}</span>
+      `;
+      container.appendChild(toast);
+      if (window.lucide) window.lucide.createIcons({ nodes: [toast] });
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    /* ==========================================================================
+       3. 다중 문서 포맷 텍스트 & 표(Table) 추출기 (.txt, .docx, .pdf, .hwpx, .hwp v5)
+       - 사용자가 업로드한 문서 파일에서 일반 조문과 함께 표(<table>) 구조도 추출합니다.
+       ========================================================================== */
+    async function extractTextFromFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const arrayBuffer = await file.arrayBuffer();
+
+      if (ext === 'txt') {
+        return parseTxtBuffer(arrayBuffer);
+      } else if (ext === 'docx') {
+        return await parseDocxBuffer(arrayBuffer);
+      } else if (ext === 'pdf') {
+        return await parsePdfBuffer(arrayBuffer);
+      } else if (ext === 'hwpx') {
+        return await parseHwpxBuffer(arrayBuffer);
+      } else if (ext === 'hwp') {
+        return await parseHwpV5Buffer(arrayBuffer);
+      } else {
+        throw new Error(`지원하지 않는 파일 형식입니다 (.${ext})`);
+      }
+    }
+
+    // HTML 문서(또는 클립보드 HTML) 안의 <table> 요소를 '| 칸1 | 칸2 |' 텍스트 표로 변환하는 공통 함수
+    // [업그레이드] colspan(가로 병합)과 rowspan(세로 병합)을 2차원 가상 격자에 펼쳐서 '<<'와 '^^' 기호로 보존합니다!
+    function convertHtmlWithTablesToPipeText(htmlString) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlString, 'text/html');
+      const tables = doc.querySelectorAll('table');
+      tables.forEach(tbl => {
+        const trList = Array.from(tbl.querySelectorAll('tr'));
+        const grid = [];
+
+        trList.forEach((tr, rIdx) => {
+          if (!grid[rIdx]) grid[rIdx] = [];
+          let cIdx = 0;
+          const cells = Array.from(tr.querySelectorAll(':scope > th, :scope > td'));
+
+          cells.forEach(td => {
+            // 윗줄의 rowspan 등으로 이미 채워진 칸은 건너뜁니다.
+            while (grid[rIdx][cIdx] !== undefined) {
+              cIdx++;
+            }
+            const text = (td.textContent || '').replace(/\s+/g, ' ').trim();
+            const colspan = Math.max(1, parseInt(td.getAttribute('colspan') || '1', 10) || 1);
+            const rowspan = Math.max(1, parseInt(td.getAttribute('rowspan') || '1', 10) || 1);
+
+            for (let dr = 0; dr < rowspan; dr++) {
+              const targetRow = rIdx + dr;
+              if (!grid[targetRow]) grid[targetRow] = [];
+              for (let dc = 0; dc < colspan; dc++) {
+                const targetCol = cIdx + dc;
+                if (dr === 0 && dc === 0) {
+                  grid[targetRow][targetCol] = text;
+                } else if (dr === 0 && dc > 0) {
+                  // 가로 병합(colspan)된 오른쪽 칸은 '<<' 기호로 기록
+                  grid[targetRow][targetCol] = '<<';
+                } else {
+                  // 세로 병합(rowspan)된 아랫줄 칸은 '^^' 기호로 기록
+                  grid[targetRow][targetCol] = '^^';
+                }
+              }
+            }
+            cIdx += colspan;
+          });
+        });
+
+        const rows = [];
+        const maxCols = grid.reduce((max, r) => Math.max(max, r ? r.length : 0), 0);
+        grid.forEach(r => {
+          if (!r || r.length === 0) return;
+          const normalized = [];
+          for (let c = 0; c < maxCols; c++) {
+            normalized.push(r[c] !== undefined ? r[c] : '');
+          }
+          if (normalized.some(Boolean)) {
+            rows.push(`| ${normalized.join(' | ')} |`);
+          }
+        });
+
+        const replacement = doc.createElement('div');
+        replacement.textContent = '\n' + rows.join('\n') + '\n';
+        tbl.replaceWith(replacement);
+      });
+
+      // 블록 태그 뒤에 줄바꿈 보장
+      doc.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, br, tr').forEach(el => {
+        if (el.tagName.toLowerCase() === 'br') {
+          el.replaceWith('\n');
+        } else {
+          el.appendChild(doc.createTextNode('\n'));
+        }
+      });
+
+      return normalizeExtractedText(doc.body.textContent || '');
+    }
+
+    // 3.1 TXT 파서 (UTF-8 기본 해독 및 한글 깨짐 발생 시 EUC-KR 자동 전환)
+    function parseTxtBuffer(buffer) {
+      const utf8Decoder = new TextDecoder('utf-8', { fatal: false });
+      let text = utf8Decoder.decode(buffer);
+      const replacementCount = (text.match(/\uFFFD/g) || []).length;
+      if (replacementCount > 0) {
+        try {
+          const euckrDecoder = new TextDecoder('euc-kr');
+          text = euckrDecoder.decode(buffer);
+        } catch (e) {
+          // EUC-KR 미지원 환경일 경우 UTF-8 결과 유지
+        }
+      }
+      return normalizeExtractedText(text);
+    }
+
+    // 3.2 DOCX 파서 (Mammoth.js의 convertToHtml을 활용해 워드 문서 내 표 구조까지 추출)
+    async function parseDocxBuffer(buffer) {
+      if (!window.mammoth) throw new Error('DOCX 파서 라이브러리가 로드되지 않았습니다.');
+      if (window.mammoth.convertToHtml) {
+        const htmlRes = await window.mammoth.convertToHtml({ arrayBuffer: buffer });
+        if (htmlRes && htmlRes.value && htmlRes.value.includes('<table')) {
+          return convertHtmlWithTablesToPipeText(htmlRes.value);
+        }
+      }
+      const result = await window.mammoth.extractRawText({ arrayBuffer: buffer });
+      return normalizeExtractedText(result.value || '');
+    }
+
+    // 3.3 PDF 파서 (PDF.js 라이브러리로 페이지별 줄바꿈 위치 계산 후 텍스트 결합)
+    async function parsePdfBuffer(buffer) {
+      if (!window.pdfjsLib) throw new Error('PDF 파서 라이브러리가 로드되지 않았습니다.');
+      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+      const pageTexts = [];
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const content = await page.getTextContent();
+        let lastY = null;
+        let lineBuffer = '';
+        const lines = [];
+
+        for (const item of content.items) {
+          const str = item.str || '';
+          const y = item.transform ? Math.round(item.transform[5]) : null;
+          if (lastY !== null && y !== null && Math.abs(y - lastY) > 5) {
+            if (lineBuffer.trim()) lines.push(lineBuffer.trim());
+            lineBuffer = str;
+          } else {
+            lineBuffer += (lineBuffer && !lineBuffer.endsWith(' ') && !str.startsWith(' ') ? ' ' : '') + str;
+          }
+          if (y !== null) lastY = y;
+        }
+        if (lineBuffer.trim()) lines.push(lineBuffer.trim());
+        pageTexts.push(lines.join('\n'));
+      }
+      return normalizeExtractedText(pageTexts.join('\n\n'));
+    }
+
+    // 3.4 HWPX(개방형 한글) 파서 (문단 <hp:p> 뿐만 아니라 표 <hp:tbl> 태그도 '| 칸1 | 칸2 |'로 추출)
+    async function parseHwpxBuffer(buffer) {
+      if (!window.JSZip) throw new Error('HWPX 압축 해제 라이브러리(JSZip)가 로드되지 않았습니다.');
+      const zip = await window.JSZip.loadAsync(buffer);
+      const sectionFiles = Object.keys(zip.files)
+        .filter(name => /^Contents\/section\d+\.xml$/i.test(name))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+      if (sectionFiles.length === 0) {
+        throw new Error('HWPX 내부에서 본문 섹션(Contents/section*.xml)을 찾을 수 없습니다.');
+      }
+
+      const paragraphs = [];
+      const domParser = new DOMParser();
+
+      // 특정 노드가 표(<hp:tbl>) 내부에 속한 노드인지 확인하는 보조 함수
+      function getClosestTableAncestor(node) {
+        let cur = node.parentNode;
+        while (cur) {
+          if (cur.localName === 'tbl') return cur;
+          cur = cur.parentNode;
+        }
+        return null;
+      }
+
+      for (const filePath of sectionFiles) {
+        const xmlText = await zip.files[filePath].async('string');
+        const xmlDoc = domParser.parseFromString(xmlText, 'application/xml');
+        const allNodes = xmlDoc.getElementsByTagName('*');
+
+        for (let i = 0; i < allNodes.length; i++) {
+          const node = allNodes[i];
+
+          // 1) 표(<hp:tbl>)를 만난 경우: 행(<hp:tr>)과 셀(<hp:tc>) 및 병합(<hp:cellSpan>)을 읽어 '| 칸1 | 칸2 |' 형태로 변환
+          if (node.localName === 'tbl' && !getClosestTableAncestor(node)) {
+            const trNodes = Array.from(node.getElementsByTagName('*')).filter(el => {
+              if (el.localName !== 'tr') return false;
+              return getClosestTableAncestor(el) === node;
+            });
+
+            const grid = [];
+            trNodes.forEach((tr, rIdx) => {
+              if (!grid[rIdx]) grid[rIdx] = [];
+              let cIdx = 0;
+
+              const tcNodes = Array.from(tr.getElementsByTagName('*')).filter(el => {
+                if (el.localName !== 'tc') return false;
+                let p = el.parentNode;
+                while (p && p.localName !== 'tr') p = p.parentNode;
+                return p === tr;
+              });
+
+              tcNodes.forEach(tc => {
+                while (grid[rIdx][cIdx] !== undefined) {
+                  cIdx++;
+                }
+
+                const tEls = Array.from(tc.getElementsByTagName('*')).filter(el => el.localName === 't');
+                const text = tEls.map(t => t.textContent || '').join(' ').replace(/\s+/g, ' ').trim();
+
+                // HWPX의 <hp:cellSpan colSpan="M" rowSpan="N"/> 태그 확인
+                const spanEl = Array.from(tc.getElementsByTagName('*')).find(el => el.localName === 'cellSpan');
+                const colspan = spanEl ? Math.max(1, parseInt(spanEl.getAttribute('colSpan') || '1', 10) || 1) : 1;
+                const rowspan = spanEl ? Math.max(1, parseInt(spanEl.getAttribute('rowSpan') || '1', 10) || 1) : 1;
+
+                for (let dr = 0; dr < rowspan; dr++) {
+                  const targetRow = rIdx + dr;
+                  if (!grid[targetRow]) grid[targetRow] = [];
+                  for (let dc = 0; dc < colspan; dc++) {
+                    const targetCol = cIdx + dc;
+                    if (dr === 0 && dc === 0) {
+                      grid[targetRow][targetCol] = text;
+                    } else if (dr === 0 && dc > 0) {
+                      grid[targetRow][targetCol] = '<<';
+                    } else {
+                      grid[targetRow][targetCol] = '^^';
+                    }
+                  }
+                }
+                cIdx += colspan;
+              });
+            });
+
+            const maxCols = grid.reduce((max, r) => Math.max(max, r ? r.length : 0), 0);
+            grid.forEach(r => {
+              if (!r || r.length === 0) return;
+              const normalized = [];
+              for (let c = 0; c < maxCols; c++) {
+                normalized.push(r[c] !== undefined ? r[c] : '');
+              }
+              if (normalized.some(Boolean)) {
+                paragraphs.push(`| ${normalized.join(' | ')} |`);
+              }
+            });
+            continue;
+          }
+
+          // 2) 일반 문단(<hp:p>)을 만난 경우 (표 내부의 문단은 위에서 처리했으므로 건너뜀)
+          if (node.localName === 'p' && !getClosestTableAncestor(node)) {
+            const tNodes = node.getElementsByTagName('*');
+            let paraText = '';
+            for (let j = 0; j < tNodes.length; j++) {
+              const child = tNodes[j];
+              if (child.localName === 't') {
+                let parentP = child.parentNode;
+                while (parentP && parentP.localName !== 'p') {
+                  parentP = parentP.parentNode;
+                }
+                if (parentP === node) {
+                  paraText += child.textContent || '';
+                }
+              } else if (child.localName === 'lineBreak') {
+                paraText += '\n';
+              }
+            }
+            if (paraText.trim()) {
+              paragraphs.push(paraText.trim());
+            }
+          }
+        }
+      }
+      return normalizeExtractedText(paragraphs.join('\n'));
+    }
+
+    // 3.5 HWP v5(일반 한글 문서) 바이너리 파서 (CFB + Pako 압축 해제 + Tag 67 문단 텍스트 추출)
+    async function parseHwpV5Buffer(buffer) {
+      const headerBytes = new Uint8Array(buffer, 0, 4);
+      if (headerBytes[0] === 0x50 && headerBytes[1] === 0x4B && headerBytes[2] === 0x03 && headerBytes[3] === 0x04) {
+        return await parseHwpxBuffer(buffer);
+      }
+
+      if (!window.CFB) throw new Error('HWP 파서용 CFB 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.');
+      if (!window.pako) throw new Error('HWP 파서용 Pako 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해 주세요.');
+
+      const cfb = window.CFB.read(new Uint8Array(buffer), { type: 'array' });
+      const fileHeaderEntry = window.CFB.find(cfb, 'FileHeader');
+      if (!fileHeaderEntry || !fileHeaderEntry.content) {
+        throw new Error('유효한 HWP v5 문서 구조(FileHeader)를 찾을 수 없습니다.');
+      }
+
+      const fileHeader = new Uint8Array(fileHeaderEntry.content);
+      const flags = fileHeader[36] | (fileHeader[37] << 8) | (fileHeader[38] << 16) | (fileHeader[39] << 24);
+      const isCompressed = (flags & 0x01) !== 0;
+      const isEncrypted = (flags & 0x02) !== 0;
+
+      if (isEncrypted) {
+        throw new Error('암호 설정된 HWP 문서는 먼저 한글에서 암호를 해제한 후 업로드해 주세요.');
+      }
+
+      const sectionEntries = cfb.FileIndex.filter(entry =>
+        entry.name && /^Section\d+$/i.test(entry.name) && entry.size > 0
+      ).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+      if (sectionEntries.length === 0) {
+        throw new Error('HWP 문서에서 본문 스트림(BodyText/Section*)을 찾을 수 없습니다.');
+      }
+
+      const EXTENDED_CONTROL_CODES = new Set([
+        1, 2, 3, 4, 5, 6, 7, 8, 9,
+        11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+      ]);
+
+      const paragraphs = [];
+
+      for (const section of sectionEntries) {
+        let rawBytes = new Uint8Array(section.content);
+        if (isCompressed) {
+          try {
+            rawBytes = window.pako.inflateRaw(rawBytes);
+          } catch (err) {
+            try {
+              rawBytes = window.pako.inflate(rawBytes);
+            } catch (err2) {
+              throw new Error('HWP 본문 스트림 압축 해제에 실패했습니다.');
+            }
+          }
+        }
+
+        const view = new DataView(rawBytes.buffer, rawBytes.byteOffset, rawBytes.byteLength);
+        let offset = 0;
+
+        while (offset + 4 <= rawBytes.byteLength) {
+          const header = view.getUint32(offset, true);
+          offset += 4;
+
+          const tagId = header & 0x3FF;
+          let recordSize = (header >>> 20) & 0xFFF;
+
+          if (recordSize === 0xFFF) {
+            if (offset + 4 > rawBytes.byteLength) break;
+            recordSize = view.getUint32(offset, true);
+            offset += 4;
+          }
+
+          if (offset + recordSize > rawBytes.byteLength) break;
+
+          if (tagId === 67 && recordSize >= 2) {
+            let paraStr = '';
+            const numWChars = Math.floor(recordSize / 2);
+            let i = 0;
+            while (i < numWChars) {
+              const code = view.getUint16(offset + i * 2, true);
+              if (code === 0) {
+                i++;
+              } else if (EXTENDED_CONTROL_CODES.has(code)) {
+                if (code === 9) paraStr += ' ';
+                i += 8;
+              } else if (code === 10 || code === 13) {
+                paraStr += '\n';
+                i++;
+              } else if (code === 24) {
+                paraStr += '-';
+                i++;
+              } else if (code === 30 || code === 31) {
+                paraStr += ' ';
+                i++;
+              } else if (code < 32) {
+                i++;
+              } else {
+                paraStr += String.fromCharCode(code);
+                i++;
+              }
+            }
+            if (paraStr.trim()) {
+              paragraphs.push(paraStr.trim());
+            }
+          }
+
+          offset += recordSize;
+        }
+      }
+
+      return normalizeExtractedText(paragraphs.join('\n'));
+    }
+
+    function normalizeExtractedText(text) {
+      return text
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .replace(/\u00A0/g, ' ')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    /* ==========================================================================
+       4. 법조문 구조 분석기 (조 · 항 · 호 · 목 · 표[Table] 자동 분리 파서)
+       - 입력된 글을 제N조(조문), ①②(항), 1. 2.(호), 가. 나.(목) 및 표(| 칸1 | 칸2 |)로 분석합니다.
+       ========================================================================== */
+    const CIRCLED_MAP = {
+      '①': 1, '②': 2, '③': 3, '④': 4, '⑤': 5,
+      '⑥': 6, '⑦': 7, '⑧': 8, '⑨': 9, '⑩': 10,
+      '⑪': 11, '⑫': 12, '⑬': 13, '⑭': 14, '⑮': 15,
+      '⑯': 16, '⑰': 17, '⑱': 18, '⑲': 19, '⑳': 20
+    };
+
+    const KOREAN_MOK_ORDER = '가나다라마바사아자차카타파하';
+
+    // 한 줄이 표(| 칸1 | 칸2 |) 형식인지 판별하는 함수
+    function isTableLine(line) {
+      const trimmed = (line || '').trim();
+      if (!trimmed) return false;
+      // 양끝이 | 이거나, 한 줄 안에 | 구분자가 2개 이상 있는 경우 표 줄로 인식합니다.
+      if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length > 2) return true;
+      const pipeCount = (trimmed.match(/\|/g) || []).length;
+      return pipeCount >= 2;
+    }
+
+    // 마크다운 표의 구분선(|---|---|)인지 판별하는 함수 (비교 시 건너뛰기 위함)
+    function isTableSeparatorLine(line) {
+      const trimmed = (line || '').trim();
+      return /^\|?[\s\-:|]+\|?$/.test(trimmed) && trimmed.includes('-');
+    }
+
+    // '| 칸1 | 칸2 |' 형태의 한 줄을 셀 배열 ['칸1', '칸2']로 쪼개는 함수
+    function parseTableRowCells(line) {
+      let trimmed = (line || '').trim();
+      if (trimmed.startsWith('|')) trimmed = trimmed.slice(1);
+      if (trimmed.endsWith('|')) trimmed = trimmed.slice(0, -1);
+      return trimmed.split('|').map(cell => cell.trim());
+    }
+
+    /**
+     * [신규 추가] 전체 법령/학칙 텍스트 안에 '부칙(또는 부 칙)'이 포함되어 있을 때
+     * 본문(mainText)과 부칙(addendumText)을 자동으로 분리해 주는 함수입니다.
+     */
+    function splitMainAndAddendumText(rawText) {
+      const cleaned = normalizeExtractedText(rawText || '');
+      if (!cleaned) return { mainText: '', addendumText: '' };
+
+      const lines = cleaned.split('\n');
+      // '부칙', '부 칙', '부칙 <제2026-1호...>', '[부칙]' 등 부칙 시작 제목 줄을 찾습니다.
+      const addendumHeaderRegex = /^(?:\[\s*)?부\s*칙(?:\s*\])?(?:\s*<[^>]+>|\s*\([^)]+\)|\s*제\s*\d+\s*호.*)?\s*$/;
+
+      let splitIdx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        const t = lines[i].trim();
+        if (!isTableLine(t) && addendumHeaderRegex.test(t)) {
+          splitIdx = i;
+          break;
+        }
+      }
+
+      if (splitIdx === -1) {
+        return { mainText: cleaned, addendumText: '' };
+      }
+
+      const mainText = lines.slice(0, splitIdx).join('\n').trim();
+      const addendumText = lines.slice(splitIdx).join('\n').trim();
+      return { mainText, addendumText };
+    }
+
+    /**
+     * [신규 추가] 부칙(Addendum) 텍스트를 조문(제1조, 제2조...) 또는 단문 부칙 단위로 분석하는 전용 파서입니다.
+     * - 첫 줄에 '부칙 <제2026-5호...>' 헤더가 있으면 부칙 제목으로 보존하거나 조문과 함께 정리합니다.
+     */
+    function parseAddendumText(rawText, mode = 'clause') {
+      const cleaned = normalizeExtractedText(rawText || '');
+      if (!cleaned) return [];
+
+      const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+      const addendumHeaderRegex = /^(?:\[\s*)?부\s*칙(?:\s*\])?(?:\s*(<[^>]+>|\([^)]+\)|제\s*\d+\s*호.*))?\s*$/;
+
+      let bodyLines = lines;
+      // 첫 줄이 '부칙 <...>' 제목 줄이면, 아래에 제1조 등이 있는지 확인합니다.
+      if (lines.length > 1 && addendumHeaderRegex.test(lines[0])) {
+        const hasNumberedArticle = lines.slice(1).some(l => /^제\s*\d+\s*조/.test(l) || /^[①②③④⑤]/.test(l));
+        if (hasNumberedArticle) {
+          // 부칙 공포번호·시행일 제목 줄도 맨 위 항목('부칙 표제')으로 비교할 수 있도록 제0조(부칙 표제)로 등록합니다.
+          const headerLine = lines[0];
+          const restText = lines.slice(1).join('\n');
+          const parsedRest = parseLegalText(restText, mode);
+          return [
+            {
+              key: 'ADDENDUM_HEADER',
+              mainNum: 0,
+              subNum: 0,
+              sortOrder: 1,
+              articleNumStr: '부칙 표제',
+              title: '',
+              headerPrefix: '',
+              rawBody: headerLine,
+              clauses: [{
+                key: 'MAIN_HEADER',
+                type: 'main',
+                level: 'article',
+                marker: '',
+                sortOrder: 1,
+                text: headerLine
+              }]
+            },
+            ...parsedRest
+          ];
+        } else {
+          // 조 번호가 없는 단문 부칙("이 규정은 공포한 날부터 시행한다.")인 경우
+          const headerLine = lines[0];
+          const contentLine = lines.slice(1).join(' ');
+          return [
+            {
+              key: 'ADDENDUM_HEADER',
+              mainNum: 0,
+              subNum: 0,
+              sortOrder: 1,
+              articleNumStr: '부칙 표제',
+              title: '',
+              headerPrefix: '',
+              rawBody: headerLine,
+              clauses: [{
+                key: 'MAIN_HEADER',
+                type: 'main',
+                level: 'article',
+                marker: '',
+                sortOrder: 1,
+                text: headerLine
+              }]
+            },
+            {
+              key: 'ART_1_0',
+              mainNum: 1,
+              subNum: 0,
+              sortOrder: 10000,
+              articleNumStr: '시행일 등',
+              title: '',
+              headerPrefix: '',
+              rawBody: contentLine,
+              clauses: parseArticleClauses(lines.slice(1), mode)
+            }
+          ];
+        }
+      }
+
+      // '부칙' 제목 줄 없이 바로 제1조(시행일) 또는 단문으로 시작하는 경우
+      const hasNumbered = bodyLines.some(l => /^제\s*\d+\s*조/.test(l));
+      if (!hasNumbered) {
+        return [{
+          key: 'ART_1_0',
+          mainNum: 1,
+          subNum: 0,
+          sortOrder: 10000,
+          articleNumStr: '시행일 등',
+          title: '',
+          headerPrefix: '',
+          rawBody: bodyLines.join('\n'),
+          clauses: parseArticleClauses(bodyLines, mode)
+        }];
+      }
+
+      return parseLegalText(cleaned, mode);
+    }
+
+    function parseLegalText(rawText, mode = 'clause') {
+      const cleaned = normalizeExtractedText(rawText || '');
+      if (!cleaned) return [];
+
+      if (mode === 'line') {
+        const lines = cleaned.split(/\n+/).map(l => l.trim()).filter(Boolean);
+        return lines.map((line, idx) => ({
+          key: `LINE_${idx + 1}`,
+          sortOrder: (idx + 1) * 1000,
+          articleNumStr: `문단 ${idx + 1}`,
+          title: '',
+          headerPrefix: '',
+          rawBody: line,
+          clauses: [{
+            key: 'MAIN',
+            type: 'main',
+            marker: '',
+            sortOrder: 0,
+            text: line
+          }]
+        }));
+      }
+
+      // 표(| ... |)가 아닌 일반 줄에서만 한 줄에 이어진 ①, ②를 줄바꿈합니다.
+      const expandedLines = [];
+      for (const rawLine of cleaned.split('\n')) {
+        const trimmed = rawLine.trim();
+        if (!trimmed) continue;
+        if (isTableLine(trimmed)) {
+          expandedLines.push(trimmed);
+        } else {
+          const splitHang = trimmed.replace(/([^\n])\s*([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮])/g, '$1\n$2');
+          splitHang.split('\n').forEach(sub => {
+            if (sub.trim()) expandedLines.push(sub.trim());
+          });
+        }
+      }
+
+      const articles = [];
+      let currentArticle = null;
+
+      const articleRegex = /^제\s*(\d+)\s*조(?:\s*의\s*(\d+))?\s*(\([^)]+\))?\s*(.*)$/;
+      const chapterRegex = /^제\s*\d+\s*[장절관편]\b/;
+
+      for (const line of expandedLines) {
+        if (chapterRegex.test(line)) {
+          continue;
+        }
+        const match = !isTableLine(line) ? line.match(articleRegex) : null;
+        if (match) {
+          const mainNum = parseInt(match[1], 10);
+          const subNum = match[2] ? parseInt(match[2], 10) : 0;
+          const titlePart = match[3] ? match[3].trim() : '';
+          const remainder = (match[4] || '').trim();
+
+          const articleNumStr = subNum > 0 ? `제${mainNum}조의${subNum}` : `제${mainNum}조`;
+          const key = `ART_${mainNum}_${subNum}`;
+          const sortOrder = mainNum * 10000 + subNum;
+
+          currentArticle = {
+            key,
+            mainNum,
+            subNum,
+            sortOrder,
+            articleNumStr,
+            title: titlePart,
+            headerPrefix: `${articleNumStr}${titlePart}`,
+            rawLines: []
+          };
+          if (remainder) {
+            currentArticle.rawLines.push(remainder);
+          }
+          articles.push(currentArticle);
+        } else {
+          if (!currentArticle) {
+            currentArticle = {
+              key: `PREAMBLE_${articles.length + 1}`,
+              mainNum: 0,
+              subNum: articles.length + 1,
+              sortOrder: articles.length + 1,
+              articleNumStr: `규정 본문`,
+              title: '',
+              headerPrefix: '',
+              rawLines: [line]
+            };
+            articles.push(currentArticle);
+          } else {
+            currentArticle.rawLines.push(line);
+          }
+        }
+      }
+
+      for (const art of articles) {
+        art.rawBody = art.rawLines.join('\n');
+        art.clauses = parseArticleClauses(art.rawLines, mode);
+      }
+
+      return articles;
+    }
+
+    /**
+     * 한 조문 안의 여러 줄을 항(①), 호(1.), 목(가.) 및 표(Table) 단위로 정밀하게 분류합니다.
+     */
+    function parseArticleClauses(lines, mode) {
+      if (mode === 'article') {
+        // 조 단위 비교 모드에서도 표가 있으면 표를 유지할 수 있도록 분리합니다.
+        const hasTable = lines.some(l => isTableLine(l));
+        if (!hasTable) {
+          const joined = lines.join(' ');
+          return [{
+            key: 'BODY_ALL',
+            type: 'main',
+            level: 'article',
+            marker: '',
+            sortOrder: 1,
+            text: joined
+          }];
+        }
+      }
+
+      const clauses = [];
+      let currentHangNum = 0;
+      let currentHoNum = 0;
+      let seqCounter = 0;
+      let tableCountInHang = 0;
+
+      const hangRegex = /^([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳])\s*(.*)$/;
+      const hoRegex = /^(\d+)(?:의(\d+))?\.\s*(.*)$/;
+      const mokRegex = /^([가-하])\.\s*(.*)$/;
+
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        seqCounter++;
+
+        // [신규 추가] 1. 표(| 칸1 | 칸2 |) 줄이 시작되면 연속된 표 줄을 하나의 표(Table) 객체로 묶습니다.
+        if (isTableLine(line)) {
+          const tableRows = [];
+          const rawTableLines = [];
+          while (i < lines.length && isTableLine(lines[i])) {
+            const tLine = lines[i];
+            if (!isTableSeparatorLine(tLine)) {
+              tableRows.push(parseTableRowCells(tLine));
+              rawTableLines.push(tLine);
+            }
+            i++;
+          }
+          if (tableRows.length > 0) {
+            tableCountInHang++;
+            clauses.push({
+              key: `HANG_${currentHangNum}_TABLE_${tableCountInHang}`,
+              type: 'table',
+              level: 'table',
+              marker: '',
+              sortOrder: currentHangNum * 10000 + currentHoNum * 10 + seqCounter,
+              rows: tableRows,
+              text: rawTableLines.join('\n')
+            });
+          }
+          continue;
+        }
+
+        // 2. 항(①, ②...) 판별
+        const hangMatch = line.match(hangRegex);
+        if (hangMatch) {
+          const marker = hangMatch[1];
+          const text = hangMatch[2].trim();
+          currentHangNum = CIRCLED_MAP[marker] || seqCounter;
+          currentHoNum = 0;
+          tableCountInHang = 0;
+          clauses.push({
+            key: `HANG_${currentHangNum}`,
+            type: 'hang',
+            level: 'hang',
+            marker,
+            sortOrder: currentHangNum * 10000,
+            text
+          });
+          i++;
+          continue;
+        }
+
+        // 3. 호(1., 2...) 판별
+        const hoMatch = line.match(hoRegex);
+        if (hoMatch) {
+          const hoMain = parseInt(hoMatch[1], 10);
+          const hoSub = hoMatch[2] ? parseInt(hoMatch[2], 10) : 0;
+          const marker = hoSub > 0 ? `${hoMain}의${hoSub}.` : `${hoMain}.`;
+          const text = hoMatch[3].trim();
+          currentHoNum = hoMain * 100 + hoSub;
+          clauses.push({
+            key: `HANG_${currentHangNum}_HO_${hoMain}_${hoSub}`,
+            type: 'ho',
+            level: 'ho',
+            marker,
+            sortOrder: currentHangNum * 10000 + currentHoNum * 10,
+            text
+          });
+          i++;
+          continue;
+        }
+
+        // 4. 목(가., 나...) 판별
+        const mokMatch = line.match(mokRegex);
+        if (mokMatch) {
+          const mokChar = mokMatch[1];
+          const mokIdx = KOREAN_MOK_ORDER.indexOf(mokChar) + 1;
+          const marker = `${mokChar}.`;
+          const text = mokMatch[2].trim();
+          clauses.push({
+            key: `HANG_${currentHangNum}_HO_${currentHoNum}_MOK_${mokChar}`,
+            type: 'mok',
+            level: 'mok',
+            marker,
+            sortOrder: currentHangNum * 10000 + currentHoNum * 10 + mokIdx,
+            text
+          });
+          i++;
+          continue;
+        }
+
+        // 5. 번호 기호가 없는 일반 본문 줄 처리
+        if (clauses.length === 0 || clauses[clauses.length - 1].type === 'table') {
+          clauses.push({
+            key: `MAIN_${seqCounter}`,
+            type: 'main',
+            level: 'article',
+            marker: '',
+            sortOrder: currentHangNum * 10000 + seqCounter,
+            text: line
+          });
+        } else {
+          const prev = clauses[clauses.length - 1];
+          prev.text = `${prev.text} ${line}`.trim();
+        }
+        i++;
+      }
+
+      return clauses;
+    }
+
+    /* ==========================================================================
+       5. 어절·단어 단위 비교(LCS Diff) 엔진 & 표(Table) 셀 단위 비교 엔진
+       ========================================================================== */
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function tokenizeKoreanLegalText(text) {
+      if (!text) return [];
+      return text.match(/\s+|[가-힣A-Za-z0-9]+|[^\s가-힣A-Za-z0-9]+/g) || [];
+    }
+
+    function diffSentencePair(oldText, newText, options) {
+      if (oldText.trim() === newText.trim()) {
+        const safe = escapeHtml(newText);
+        return { oldHtml: safe, newHtml: safe, isIdentical: true };
+      }
+
+      const oldTokens = tokenizeKoreanLegalText(oldText.trim());
+      const newTokens = tokenizeKoreanLegalText(newText.trim());
+
+      const oldWords = [];
+      const newWords = [];
+      oldTokens.forEach((t, idx) => {
+        if (!/^\s+$/.test(t)) oldWords.push({ token: t, origIdx: idx });
+      });
+      newTokens.forEach((t, idx) => {
+        if (!/^\s+$/.test(t)) newWords.push({ token: t, origIdx: idx });
+      });
+
+      const m = oldWords.length;
+      const n = newWords.length;
+
+      const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+      for (let i = m - 1; i >= 0; i--) {
+        for (let j = n - 1; j >= 0; j--) {
+          if (oldWords[i].token === newWords[j].token) {
+            dp[i][j] = 1 + dp[i + 1][j + 1];
+          } else {
+            dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+          }
+        }
+      }
+
+      const ops = [];
+      let i = 0;
+      let j = 0;
+      while (i < m && j < n) {
+        if (oldWords[i].token === newWords[j].token) {
+          ops.push({ type: 'equal', oldWord: oldWords[i].token, newWord: newWords[j].token });
+          i++;
+          j++;
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+          ops.push({ type: 'delete', oldWord: oldWords[i].token });
+          i++;
+        } else {
+          ops.push({ type: 'insert', newWord: newWords[j].token });
+          j++;
+        }
+      }
+      while (i < m) {
+        ops.push({ type: 'delete', oldWord: oldWords[i].token });
+        i++;
+      }
+      while (j < n) {
+        ops.push({ type: 'insert', newWord: newWords[j].token });
+        j++;
+      }
+
+      const chunks = [];
+      let idx = 0;
+      while (idx < ops.length) {
+        if (ops[idx].type === 'equal') {
+          const eqWords = [];
+          while (idx < ops.length && ops[idx].type === 'equal') {
+            eqWords.push(ops[idx].oldWord);
+            idx++;
+          }
+          chunks.push({ type: 'equal', words: eqWords });
+        } else {
+          const delWords = [];
+          const insWords = [];
+          while (idx < ops.length && ops[idx].type !== 'equal') {
+            if (ops[idx].type === 'delete') delWords.push(ops[idx].oldWord);
+            if (ops[idx].type === 'insert') insWords.push(ops[idx].newWord);
+            idx++;
+          }
+          chunks.push({ type: 'change', delWords, insWords });
+        }
+      }
+
+      const mergedChunks = [];
+      for (let c = 0; c < chunks.length; c++) {
+        const curr = chunks[c];
+        if (
+          curr.type === 'equal' &&
+          curr.words.length === 1 &&
+          curr.words[0].length <= 1 &&
+          mergedChunks.length > 0 &&
+          mergedChunks[mergedChunks.length - 1].type === 'change' &&
+          c + 1 < chunks.length &&
+          chunks[c + 1].type === 'change'
+        ) {
+          const prevChange = mergedChunks[mergedChunks.length - 1];
+          const nextChange = chunks[c + 1];
+          prevChange.delWords.push(curr.words[0], ...nextChange.delWords);
+          prevChange.insWords.push(curr.words[0], ...nextChange.insWords);
+          c++;
+        } else {
+          mergedChunks.push(curr);
+        }
+      }
+
+      function joinKoreanTokens(tokens) {
+        let out = '';
+        for (let k = 0; k < tokens.length; k++) {
+          const tok = tokens[k];
+          const prev = k > 0 ? tokens[k - 1] : '';
+          const noSpaceBefore = /^[.,;:!?)}\]〉》」』·ㆍ~]/.test(tok);
+          const noSpaceAfterPrev = /^[({[<〈《「『~·ㆍ]/.test(prev);
+          if (k === 0 || noSpaceBefore || noSpaceAfterPrev) {
+            out += tok;
+          } else {
+            out += ' ' + tok;
+          }
+        }
+        return out;
+      }
+
+      const oldParts = [];
+      const newParts = [];
+
+      for (const chunk of mergedChunks) {
+        if (chunk.type === 'equal') {
+          const str = escapeHtml(joinKoreanTokens(chunk.words));
+          oldParts.push(str);
+          newParts.push(str);
+        } else {
+          const hasDel = chunk.delWords.length > 0;
+          const hasIns = chunk.insWords.length > 0;
+
+          if (hasDel && hasIns) {
+            const delStr = escapeHtml(joinKoreanTokens(chunk.delWords));
+            const insStr = escapeHtml(joinKoreanTokens(chunk.insWords));
+            oldParts.push(options.underlineOld ? `<u class="diff-u diff-u-old" style="text-decoration: underline; text-underline-offset: 3px;">${delStr}</u>` : delStr);
+            newParts.push(options.underlineNew ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${insStr}</u>` : insStr);
+          } else if (hasDel && !hasIns) {
+            const delStr = escapeHtml(joinKoreanTokens(chunk.delWords));
+            oldParts.push(options.underlineOld ? `<u class="diff-u diff-u-old" style="text-decoration: underline; text-underline-offset: 3px;">${delStr}</u>` : delStr);
+            if (options.inlineDeleteStyle !== 'NONE') {
+              const marker = escapeHtml(options.inlineDeleteStyle);
+              newParts.push(options.underlineNew ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${marker}</u>` : marker);
+            }
+          } else if (!hasDel && hasIns) {
+            const insStr = escapeHtml(joinKoreanTokens(chunk.insWords));
+            newParts.push(options.underlineNew ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${insStr}</u>` : insStr);
+          }
+        }
+      }
+
+      return {
+        oldHtml: oldParts.join(' ').replace(/\s+([.,;:!?)])/g, '$1'),
+        newHtml: newParts.join(' ').replace(/\s+([.,;:!?)])/g, '$1'),
+        isIdentical: false
+      };
+    }
+
+    /**
+     * [신규 추가] 셀 텍스트에서 '{가로2}', '{세로3}' 같은 명시적 병합 지시어를 추출하고 순수 텍스트만 남기는 보조 함수
+     */
+    function parseExplicitCellSpanToken(rawStr) {
+      let text = String(rawStr || '').trim();
+      let explicitColspan = 1;
+      let explicitRowspan = 1;
+
+      const colMatch = text.match(/\{가로\s*(\d+)\}/);
+      if (colMatch) {
+        explicitColspan = Math.max(1, parseInt(colMatch[1], 10) || 1);
+        text = text.replace(colMatch[0], '').trim();
+      }
+      const rowMatch = text.match(/\{세로\s*(\d+)\}/);
+      if (rowMatch) {
+        explicitRowspan = Math.max(1, parseInt(rowMatch[1], 10) || 1);
+        text = text.replace(rowMatch[0], '').trim();
+      }
+      return { cleanText: text, explicitColspan, explicitRowspan };
+    }
+
+    /**
+     * [신규 추가] 2차원 셀 그리드(각 칸이 { rawToken, html, isHeader, fullRowColspan, customStyle } 형태)를 받아
+     * '<<'(가로 병합)와 '^^'(세로 병합) 및 '{가로N}', '{세로N}'를 분석하여 실제 HTML <td rowspan="N" colspan="M"> 표로 조립합니다.
+     */
+    function buildMergedTableHtmlFromGrid(cellGrid, maxCols) {
+      const rowCount = cellGrid.length;
+      const visited = Array.from({ length: rowCount }, () => new Array(maxCols).fill(false));
+      const trs = [];
+
+      for (let r = 0; r < rowCount; r++) {
+        const row = cellGrid[r];
+        if (!row) continue;
+
+        // 행 전체가 <신설> 또는 <삭제> 한 줄로 병합된 특수 행인 경우
+        if (row.length === 1 && row[0].fullRowColspan) {
+          const cell = row[0];
+          const tag = cell.isHeader ? 'th' : 'td';
+          const styleAttr = cell.customStyle ? ` style="${cell.customStyle}"` : '';
+          trs.push(`<tr><${tag} colspan="${maxCols}"${styleAttr}>${cell.html || '&nbsp;'}</${tag}></tr>`);
+          continue;
+        }
+
+        const cellsHtml = [];
+        for (let c = 0; c < maxCols; c++) {
+          if (visited[r][c]) continue;
+          const cell = row[c] || { rawToken: '', html: '&nbsp;', isHeader: r === 0 };
+          const rawTrimmed = String(cell.rawToken || '').trim();
+
+          // 만약 이 칸 자체가 '<<' 또는 '^^'인데 위/왼쪽 원본 셀에서 아직 방문 처리되지 않았다면(단독 기호 오타 등) 빈칸처럼 건너뜀
+          if (rawTrimmed === '<<' || rawTrimmed === '^^') {
+            visited[r][c] = true;
+            continue;
+          }
+
+          const { explicitColspan, explicitRowspan } = parseExplicitCellSpanToken(rawTrimmed);
+
+          // 오른쪽으로 연속된 '<<' 개수를 세어 colspan 계산
+          let autoColspan = 1;
+          while (c + autoColspan < maxCols) {
+            const rightCell = row[c + autoColspan];
+            if (rightCell && String(rightCell.rawToken || '').trim() === '<<') {
+              autoColspan++;
+            } else {
+              break;
+            }
+          }
+          const colspan = Math.min(maxCols - c, Math.max(autoColspan, explicitColspan));
+
+          // 아래쪽으로 연속된 '^^' 개수를 세어 rowspan 계산 (전체행 <신설>/<삭제> 줄은 건너뛰지 않고 중단)
+          let autoRowspan = 1;
+          while (r + autoRowspan < rowCount) {
+            const belowRow = cellGrid[r + autoRowspan];
+            if (!belowRow || (belowRow.length === 1 && belowRow[0].fullRowColspan)) break;
+            const belowCell = belowRow[c];
+            if (belowCell && String(belowCell.rawToken || '').trim() === '^^') {
+              autoRowspan++;
+            } else {
+              break;
+            }
+          }
+          const rowspan = Math.min(rowCount - r, Math.max(autoRowspan, explicitRowspan));
+
+          // 병합 범위만큼 방문 표시
+          for (let dr = 0; dr < rowspan; dr++) {
+            for (let dc = 0; dc < colspan; dc++) {
+              if (r + dr < rowCount && c + dc < maxCols) {
+                visited[r + dr][c + dc] = true;
+              }
+            }
+          }
+
+          const tag = cell.isHeader ? 'th' : 'td';
+          const spanAttrs = `${rowspan > 1 ? ` rowspan="${rowspan}"` : ''}${colspan > 1 ? ` colspan="${colspan}"` : ''}`;
+          const styleAttr = cell.customStyle ? ` style="${cell.customStyle}"` : '';
+          cellsHtml.push(`<${tag}${spanAttrs}${styleAttr}>${cell.html || '&nbsp;'}</${tag}>`);
+        }
+
+        if (cellsHtml.length > 0) {
+          trs.push(`<tr>${cellsHtml.join('')}</tr>`);
+        }
+      }
+
+      return `<div class="clause-table-wrap"><table class="inner-legal-table"><tbody>${trs.join('')}</tbody></table></div>`;
+    }
+
+    /**
+     * [업그레이드] 단일 표(2차원 배열 rows)를 병합 셀(colspan, rowspan)을 반영하여 HTML <table class="inner-legal-table">로 렌더링하는 함수
+     */
+    function renderSingleTableHtml(rows, wrapUnderline = false) {
+      if (!rows || rows.length === 0) return '';
+      const maxCols = Math.max(...rows.map(r => r.length), 1);
+
+      const cellGrid = rows.map((row, rIdx) => {
+        const isHeader = rIdx === 0;
+        const rowCells = [];
+        for (let c = 0; c < maxCols; c++) {
+          const rawToken = (row[c] || '').trim();
+          const { cleanText } = parseExplicitCellSpanToken(rawToken);
+          const safeText = escapeHtml(cleanText);
+          const html = (wrapUnderline && safeText && rawToken !== '<<' && rawToken !== '^^')
+            ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${safeText}</u>`
+            : (safeText || '&nbsp;');
+          rowCells.push({ rawToken, html, isHeader });
+        }
+        return rowCells;
+      });
+
+      return buildMergedTableHtmlFromGrid(cellGrid, maxCols);
+    }
+
+    /**
+     * [업그레이드] 현행 표(oldRows)와 개정안 표(newRows)를 행·열(셀) 단위로 1:1 비교하되,
+     * '^^'(세로 병합)와 '<<'(가로 병합) 셀 구조를 보존하여 열 밀림 없이 정확한 병합 표로 렌더링합니다.
+     */
+    function diffTablePair(oldRows, newRows, options) {
+      const maxCols = Math.max(
+        ...oldRows.map(r => r.length),
+        ...newRows.map(r => r.length),
+        1
+      );
+
+      const hasHeader = oldRows.length > 0 && newRows.length > 0;
+      const oldBody = hasHeader ? oldRows.slice(1) : oldRows;
+      const newBody = hasHeader ? newRows.slice(1) : newRows;
+
+      // 세로 병합('^^')이 포함된 행도 상위 행의 실제 구분명(effectiveKey)과 병합 순번(subIdx)을 알 수 있도록 전처리합니다.
+      function buildEffectiveRowMeta(bodyRows) {
+        let lastCat = '';
+        let subCount = 0;
+        return bodyRows.map((row) => {
+          const firstRaw = parseExplicitCellSpanToken((row[0] || '').trim()).cleanText.replace(/\s+/g, '');
+          if (firstRaw === '^^') {
+            subCount++;
+            return { effectiveCat: lastCat, subIdx: subCount };
+          } else {
+            lastCat = firstRaw;
+            subCount = 0;
+            return { effectiveCat: lastCat, subIdx: 0 };
+          }
+        });
+      }
+
+      const oldMeta = buildEffectiveRowMeta(oldBody);
+      const newMeta = buildEffectiveRowMeta(newBody);
+
+      // 두 행이 같은 구분 항목(세로 병합 그룹 내 같은 순서 포함)인지 판별하는 함수
+      function isSameRowCategoryByIdx(oIdx, nIdx) {
+        const m1 = oldMeta[oIdx];
+        const m2 = newMeta[nIdx];
+        if (!m1 || !m2 || !m1.effectiveCat || !m2.effectiveCat) return false;
+        if (m1.effectiveCat !== m2.effectiveCat) return false;
+
+        // 같은 세로 병합 그룹일 때 두 번째 칸(세부 항목명)이 같거나 병합 순번이 같으면 매칭
+        const sub1 = parseExplicitCellSpanToken((oldBody[oIdx][1] || '').trim()).cleanText.replace(/\s+/g, '');
+        const sub2 = parseExplicitCellSpanToken((newBody[nIdx][1] || '').trim()).cleanText.replace(/\s+/g, '');
+        if (sub1 && sub2 && sub1 === sub2) return true;
+        return m1.subIdx === m2.subIdx;
+      }
+
+      const m = oldBody.length;
+      const n = newBody.length;
+      const dp = Array.from({ length: m + 1 }, () => new Int32Array(n + 1));
+      for (let i = m - 1; i >= 0; i--) {
+        for (let j = n - 1; j >= 0; j--) {
+          if (isSameRowCategoryByIdx(i, j)) {
+            dp[i][j] = 1 + dp[i + 1][j + 1];
+          } else {
+            dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+          }
+        }
+      }
+
+      const alignedPairs = [];
+      if (hasHeader) {
+        alignedPairs.push({ type: 'header', oldRow: oldRows[0], newRow: newRows[0] });
+      }
+
+      let i = 0;
+      let j = 0;
+      while (i < m && j < n) {
+        if (isSameRowCategoryByIdx(i, j)) {
+          alignedPairs.push({ type: 'match', oldRow: oldBody[i], newRow: newBody[j] });
+          i++;
+          j++;
+        } else if (dp[i][j] === 0 && (m - i) === (n - j)) {
+          alignedPairs.push({ type: 'match', oldRow: oldBody[i], newRow: newBody[j] });
+          i++;
+          j++;
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+          alignedPairs.push({ type: 'delete', oldRow: oldBody[i], newRow: null });
+          i++;
+        } else {
+          alignedPairs.push({ type: 'insert', oldRow: null, newRow: newBody[j] });
+          j++;
+        }
+      }
+      while (i < m) {
+        alignedPairs.push({ type: 'delete', oldRow: oldBody[i], newRow: null });
+        i++;
+      }
+      while (j < n) {
+        alignedPairs.push({ type: 'insert', oldRow: null, newRow: newBody[j] });
+        j++;
+      }
+
+      const oldGrid = [];
+      const newGrid = [];
+
+      alignedPairs.forEach((pair) => {
+        const isHeader = pair.type === 'header';
+
+        if (pair.type === 'header' || pair.type === 'match') {
+          const oldCells = [];
+          const newCells = [];
+          for (let c = 0; c < maxCols; c++) {
+            const oRaw = ((pair.oldRow && pair.oldRow[c]) || '').trim();
+            const nRaw = ((pair.newRow && pair.newRow[c]) || '').trim();
+            const oClean = parseExplicitCellSpanToken(oRaw).cleanText;
+            const nClean = parseExplicitCellSpanToken(nRaw).cleanText;
+
+            // 병합 제어 기호('<<', '^^')는 밑줄 비교 대상이 아니라 셀 병합 구조 제어용으로 그대로 전달합니다.
+            const isOldSpanMarker = (oRaw === '<<' || oRaw === '^^');
+            const isNewSpanMarker = (nRaw === '<<' || nRaw === '^^');
+
+            if (isOldSpanMarker && isNewSpanMarker) {
+              oldCells.push({ rawToken: oRaw, html: '', isHeader });
+              newCells.push({ rawToken: nRaw, html: '', isHeader });
+            } else if (isOldSpanMarker && !isNewSpanMarker) {
+              const nSafe = escapeHtml(nClean);
+              const nHtml = (options.underlineNew && nSafe)
+                ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${nSafe}</u>`
+                : (nSafe || '&nbsp;');
+              oldCells.push({ rawToken: oRaw, html: '', isHeader });
+              newCells.push({ rawToken: nRaw, html: nHtml, isHeader });
+            } else if (!isOldSpanMarker && isNewSpanMarker) {
+              const oSafe = escapeHtml(oClean);
+              const oHtml = (options.underlineOld && oSafe)
+                ? `<u class="diff-u diff-u-old" style="text-decoration: underline; text-underline-offset: 3px;">${oSafe}</u>`
+                : (oSafe || '&nbsp;');
+              oldCells.push({ rawToken: oRaw, html: oHtml, isHeader });
+              newCells.push({ rawToken: nRaw, html: '', isHeader });
+            } else {
+              const cellDiff = diffSentencePair(oClean, nClean, options);
+              oldCells.push({ rawToken: oRaw, html: cellDiff.oldHtml || '&nbsp;', isHeader });
+              newCells.push({ rawToken: nRaw, html: cellDiff.newHtml || '&nbsp;', isHeader });
+            }
+          }
+          oldGrid.push(oldCells);
+          newGrid.push(newCells);
+        } else if (pair.type === 'insert') {
+          oldGrid.push([{
+            rawToken: options.newStyle,
+            html: escapeHtml(options.newStyle),
+            isHeader: false,
+            fullRowColspan: true,
+            customStyle: 'color: #64748b;'
+          }]);
+          const newCells = [];
+          for (let c = 0; c < maxCols; c++) {
+            const nRaw = ((pair.newRow && pair.newRow[c]) || '').trim();
+            const nClean = parseExplicitCellSpanToken(nRaw).cleanText;
+            const nSafe = escapeHtml(nClean);
+            const inner = (options.underlineNew && nSafe && nRaw !== '<<' && nRaw !== '^^')
+              ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${nSafe}</u>`
+              : (nSafe || '&nbsp;');
+            newCells.push({ rawToken: nRaw, html: inner, isHeader: false });
+          }
+          newGrid.push(newCells);
+        } else if (pair.type === 'delete') {
+          const oldCells = [];
+          for (let c = 0; c < maxCols; c++) {
+            const oRaw = ((pair.oldRow && pair.oldRow[c]) || '').trim();
+            const oClean = parseExplicitCellSpanToken(oRaw).cleanText;
+            const oSafe = escapeHtml(oClean);
+            const inner = (options.underlineOld && oSafe && oRaw !== '<<' && oRaw !== '^^')
+              ? `<u class="diff-u diff-u-old" style="text-decoration: underline; text-underline-offset: 3px;">${oSafe}</u>`
+              : (oSafe || '&nbsp;');
+            oldCells.push({ rawToken: oRaw, html: inner, isHeader: false });
+          }
+          oldGrid.push(oldCells);
+          newGrid.push([{
+            rawToken: options.deletedStyle,
+            html: escapeHtml(options.deletedStyle),
+            isHeader: false,
+            fullRowColspan: true,
+            customStyle: 'color: #64748b;'
+          }]);
+        }
+      });
+
+      return {
+        oldTableHtml: buildMergedTableHtmlFromGrid(oldGrid, maxCols),
+        newTableHtml: buildMergedTableHtmlFromGrid(newGrid, maxCols)
+      };
+    }
+
+    /* ==========================================================================
+       6. 신·구조문대비표 핵심 생성 엔진
+       ========================================================================== */
+    function getComparisonOptions() {
+      return {
+        revisionType: document.getElementById('optRevisionType').value,
+        unchangedStyle: document.getElementById('optUnchangedStyle').value,
+        unchangedOldStyle: document.getElementById('optUnchangedOldStyle').value,
+        deletedStyle: document.getElementById('optDeletedStyle').value,
+        inlineDeleteStyle: document.getElementById('optInlineDeleteStyle').value,
+        newStyle: document.getElementById('optNewStyle').value,
+        granularity: document.getElementById('optGranularity').value,
+        fontFamily: document.getElementById('optFontFamily').value,
+        underlineNew: document.getElementById('chkUnderlineNew').checked,
+        underlineOld: document.getElementById('chkUnderlineOld').checked,
+        underlineNewClause: document.getElementById('chkUnderlineNewClause').checked,
+        hideUnchangedArticles: document.getElementById('chkHideUnchangedArticles').checked,
+        colorHighlight: document.getElementById('chkColorHighlight').checked
+      };
+    }
+
+    /**
+     * [공통 보조 함수] 현행 조문 배열(oldArticles)과 개정안 조문 배열(newArticles)을 받아
+     * 비교 행(rows)과 통계(stats)를 생성하는 공통 함수입니다. (본문 표와 부칙 표 모두에서 재사용)
+     */
+    function compareArticleLists(oldArticles, newArticles, options) {
+      const oldMap = new Map(oldArticles.map(a => [a.key, a]));
+      const newMap = new Map(newArticles.map(a => [a.key, a]));
+
+      const allKeysSet = new Set([...oldMap.keys(), ...newMap.keys()]);
+      const sortedKeys = Array.from(allKeysSet).sort((kA, kB) => {
+        const orderA = (oldMap.get(kA) || newMap.get(kA)).sortOrder;
+        const orderB = (oldMap.get(kB) || newMap.get(kB)).sortOrder;
+        return orderA - orderB;
+      });
+
+      const stats = {
+        total: sortedKeys.length,
+        modified: 0,
+        added: 0,
+        deleted: 0,
+        unchanged: 0
+      };
+
+      const rows = [];
+
+      for (const key of sortedKeys) {
+        const oldArt = oldMap.get(key);
+        const newArt = newMap.get(key);
+
+        if (!oldArt && newArt) {
+          stats.added++;
+          const oldCellHtml = `<div class="clause-line level-article">${escapeHtml(options.newStyle)}</div>`;
+          const newCellHtml = renderFullArticleHtml(newArt, options.underlineNewClause && options.underlineNew);
+          rows.push({ status: 'added', oldCellHtml, newCellHtml });
+          continue;
+        }
+
+        if (oldArt && !newArt) {
+          stats.deleted++;
+          const oldCellHtml = renderFullArticleHtml(oldArt, false);
+          const delMarker = escapeHtml(options.deletedStyle);
+          const prefix = oldArt.articleNumStr ? `${escapeHtml(oldArt.articleNumStr)} ` : '';
+          const newCellHtml = `<div class="clause-line level-article">${prefix}${delMarker}</div>`;
+          rows.push({ status: 'deleted', oldCellHtml, newCellHtml });
+          continue;
+        }
+
+        const isTitleSame = (oldArt.title || '').trim() === (newArt.title || '').trim();
+        const isBodySame = (oldArt.rawBody || '').replace(/\s+/g, ' ').trim() === (newArt.rawBody || '').replace(/\s+/g, ' ').trim();
+
+        if (isTitleSame && isBodySame) {
+          stats.unchanged++;
+          if (options.hideUnchangedArticles) continue;
+
+          if (options.unchangedStyle === 'FULL') {
+            rows.push({
+              status: 'unchanged',
+              oldCellHtml: renderFullArticleHtml(oldArt, false),
+              newCellHtml: renderFullArticleHtml(newArt, false)
+            });
+          } else {
+            const newAbbr = escapeHtml(options.unchangedStyle);
+            let oldAbbr = newAbbr;
+            if (options.unchangedOldStyle === '(생 략)') {
+              oldAbbr = ' (생 략)';
+            } else if (options.unchangedOldStyle === 'HEADER_ONLY') {
+              oldAbbr = '';
+            } else if (options.unchangedOldStyle === 'FULL') {
+              oldAbbr = null;
+            } else {
+              oldAbbr = ` ${newAbbr}`;
+            }
+            const headerStr = escapeHtml(oldArt.headerPrefix || oldArt.articleNumStr);
+            const oldCellHtml = oldAbbr === null
+              ? renderFullArticleHtml(oldArt, false)
+              : `<div class="clause-line level-article">${headerStr}${oldAbbr}</div>`;
+            const newCellHtml = `<div class="clause-line level-article">${headerStr} ${newAbbr}</div>`;
+            rows.push({ status: 'unchanged', oldCellHtml, newCellHtml });
+          }
+          continue;
+        }
+
+        stats.modified++;
+        const { oldCellHtml, newCellHtml } = compareArticleClauses(oldArt, newArt, options);
+        rows.push({ status: 'modified', oldCellHtml, newCellHtml });
+      }
+
+      return { rows, stats };
+    }
+
+    function buildComparisonResult() {
+      const oldRawInput = document.getElementById('oldTextInput').value;
+      const newRawInput = document.getElementById('newTextInput').value;
+      const options = getComparisonOptions();
+
+      // 입력창에 '부칙'이 포함되어 있는 경우 본문과 부칙을 자동으로 분리합니다.
+      const oldSplit = splitMainAndAddendumText(oldRawInput);
+      const newSplit = splitMainAndAddendumText(newRawInput);
+
+      const oldArticles = parseLegalText(oldSplit.mainText, options.granularity);
+      const newArticles = parseLegalText(newSplit.mainText, options.granularity);
+
+      document.getElementById('oldArticleCountBadge').textContent = `${oldArticles.length}개 조문`;
+      document.getElementById('newArticleCountBadge').textContent = `${newArticles.length}개 조문`;
+
+      const sheetWrapper = document.getElementById('tableSheetWrapper');
+      sheetWrapper.classList.toggle('font-mode-serif', options.fontFamily === 'serif');
+      sheetWrapper.classList.toggle('font-mode-sans', options.fontFamily === 'sans');
+      sheetWrapper.classList.toggle('highlight-mode', options.colorHighlight);
+
+      // 1) 본문 신·구조문대비표 생성
+      if (options.revisionType === 'full_blank' || options.revisionType === 'full_new') {
+        renderFullEnactmentTable(newArticles, options);
+      } else {
+        const { rows, stats } = compareArticleLists(oldArticles, newArticles, options);
+        updateStatsUI(stats);
+        renderTableRows(rows);
+      }
+
+      // 2) 본문에서 자동 감지·분리된 부칙(Addendum)이 있으면 별도의 '부칙 신·구조문대비표' 생성
+      buildAddendumComparisonResult(oldSplit.addendumText, newSplit.addendumText, options);
+    }
+
+    /**
+     * [신규 추가] 현행 부칙과 개정안 부칙을 비교하여 별도의 '부칙 신·구조문대비표' 시트에 렌더링하는 함수입니다.
+     */
+    function buildAddendumComparisonResult(oldAddRaw, newAddRaw, options) {
+      const addendumSheet = document.getElementById('addendumSheetWrapper');
+      const statBadge = document.getElementById('addendumStatBadge');
+      const tbody = document.getElementById('addendumTableBody');
+
+      if (!addendumSheet || !tbody) return;
+
+      addendumSheet.classList.toggle('font-mode-serif', options.fontFamily === 'serif');
+      addendumSheet.classList.toggle('font-mode-sans', options.fontFamily === 'sans');
+      addendumSheet.classList.toggle('highlight-mode', options.colorHighlight);
+
+      const oldAddArticles = parseAddendumText(oldAddRaw, options.granularity);
+      const newAddArticles = parseAddendumText(newAddRaw, options.granularity);
+
+      // 현행 부칙과 개정안 부칙이 모두 비어 있으면 부칙 시트를 숨깁니다.
+      if (oldAddArticles.length === 0 && newAddArticles.length === 0) {
+        addendumSheet.classList.add('hidden');
+        tbody.innerHTML = '';
+        return;
+      }
+
+      addendumSheet.classList.remove('hidden');
+
+      let addRows = [];
+      if (options.revisionType === 'full_blank' || options.revisionType === 'full_new') {
+        addRows = newAddArticles.map(art => ({
+          status: 'added',
+          oldCellHtml: options.revisionType === 'full_new'
+            ? `<div class="clause-line level-article">&lt;전부개정&gt;</div>`
+            : `<div class="clause-line level-article">&nbsp;</div>`,
+          newCellHtml: renderFullArticleHtml(art, options.underlineNewClause && options.underlineNew)
+        }));
+        if (statBadge) statBadge.textContent = `부칙 ${addRows.length}개 항목 비교됨`;
+      } else {
+        // 부칙 비교 시에는 조문 수가 적으므로 동일 부칙 조문도 숨기지 않고 보여주는 것이 실무상 자연스럽습니다.
+        const addOptions = { ...options, hideUnchangedArticles: false };
+        const { rows, stats } = compareArticleLists(oldAddArticles, newAddArticles, addOptions);
+        addRows = rows;
+        if (statBadge) {
+          statBadge.textContent = `부칙 총 ${stats.total}건 (개정 ${stats.modified} · 신설 ${stats.added} · 삭제 ${stats.deleted})`;
+        }
+      }
+
+      const ceAttr = isEditModeActive ? 'contenteditable="true" spellcheck="false"' : '';
+      tbody.innerHTML = addRows.map(row => `
+        <tr>
+          <td ${ceAttr}>${row.oldCellHtml}</td>
+          <td ${ceAttr}>${row.newCellHtml}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderFullEnactmentTable(newArticles, options) {
+      const stats = {
+        total: newArticles.length,
+        modified: 0,
+        added: newArticles.length,
+        deleted: 0,
+        unchanged: 0
+      };
+      updateStatsUI(stats);
+
+      const rows = newArticles.map(art => ({
+        status: 'added',
+        oldCellHtml: options.revisionType === 'full_new'
+          ? `<div class="clause-line level-article">&lt;전부개정&gt;</div>`
+          : `<div class="clause-line level-article">&nbsp;</div>`,
+        newCellHtml: renderFullArticleHtml(art, options.underlineNewClause && options.underlineNew)
+      }));
+
+      renderTableRows(rows);
+    }
+
+    function renderFullArticleHtml(article, wrapUnderline = false) {
+      const linesHtml = [];
+      const clauses = article.clauses || [];
+
+      if (clauses.length === 0) {
+        const hdr = escapeHtml(article.headerPrefix || article.articleNumStr);
+        const content = wrapUnderline ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${hdr}</u>` : hdr;
+        return `<div class="clause-line level-article">${content}</div>`;
+      }
+
+      clauses.forEach((cl, idx) => {
+        const isFirst = idx === 0;
+        const prefix = isFirst && article.headerPrefix ? `${escapeHtml(article.headerPrefix)} ` : '';
+
+        if (cl.type === 'table') {
+          if (prefix) {
+            linesHtml.push(`<div class="clause-line level-article">${prefix}</div>`);
+          }
+          linesHtml.push(renderSingleTableHtml(cl.rows, wrapUnderline));
+          return;
+        }
+
+        const marker = cl.marker ? `${escapeHtml(cl.marker)} ` : '';
+        const text = escapeHtml(cl.text);
+        const fullLine = `${prefix}${marker}${text}`.trim();
+        const inner = wrapUnderline ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${fullLine}</u>` : fullLine;
+        const levelClass = isFirst ? 'level-article' : `level-${cl.level || 'hang'}`;
+        linesHtml.push(`<div class="clause-line ${levelClass}">${inner}</div>`);
+      });
+
+      return linesHtml.join('');
+    }
+
+    /**
+     * 일부 개정된 조문 내부에서 항·호·목 및 표(Table)를 하나씩 짝맞추어 비교하는 함수입니다.
+     */
+    function compareArticleClauses(oldArt, newArt, options) {
+      const oldHeader = oldArt.headerPrefix || '';
+      const newHeader = newArt.headerPrefix || '';
+      let oldHeaderHtml = escapeHtml(oldHeader);
+      let newHeaderHtml = escapeHtml(newHeader);
+
+      if (oldHeader !== newHeader) {
+        const hdrDiff = diffSentencePair(oldHeader, newHeader, options);
+        oldHeaderHtml = hdrDiff.oldHtml;
+        newHeaderHtml = hdrDiff.newHtml;
+      }
+
+      const oldClauses = oldArt.clauses || [];
+      const newClauses = newArt.clauses || [];
+
+      const oldMap = new Map(oldClauses.map(c => [c.key, c]));
+      const newMap = new Map(newClauses.map(c => [c.key, c]));
+
+      const allKeys = Array.from(new Set([...oldMap.keys(), ...newMap.keys()])).sort((a, b) => {
+        const orderA = (oldMap.get(a) || newMap.get(a)).sortOrder;
+        const orderB = (oldMap.get(b) || newMap.get(b)).sortOrder;
+        return orderA - orderB;
+      });
+
+      const oldLines = [];
+      const newLines = [];
+
+      allKeys.forEach((key, idx) => {
+        const oldCl = oldMap.get(key);
+        const newCl = newMap.get(key);
+        const isFirstLine = idx === 0;
+
+        const oldHdrPrefix = isFirstLine && oldHeaderHtml ? `${oldHeaderHtml} ` : '';
+        const newHdrPrefix = isFirstLine && newHeaderHtml ? `${newHeaderHtml} ` : '';
+        const level = (oldCl || newCl).level || 'hang';
+        const levelClass = isFirstLine ? 'level-article' : `level-${level}`;
+
+        // [신규 추가] 표(Table) 블록 비교 처리
+        if ((oldCl && oldCl.type === 'table') || (newCl && newCl.type === 'table')) {
+          if (oldHdrPrefix) oldLines.push(`<div class="clause-line level-article">${oldHdrPrefix}</div>`);
+          if (newHdrPrefix) newLines.push(`<div class="clause-line level-article">${newHdrPrefix}</div>`);
+
+          if (!oldCl && newCl) {
+            oldLines.push(`<div class="clause-line level-hang">${escapeHtml(options.newStyle)}</div>`);
+            newLines.push(renderSingleTableHtml(newCl.rows, options.underlineNewClause && options.underlineNew));
+          } else if (oldCl && !newCl) {
+            oldLines.push(renderSingleTableHtml(oldCl.rows, false));
+            newLines.push(`<div class="clause-line level-hang">${escapeHtml(options.deletedStyle)}</div>`);
+          } else {
+            const { oldTableHtml, newTableHtml } = diffTablePair(oldCl.rows, newCl.rows, options);
+            oldLines.push(oldTableHtml);
+            newLines.push(newTableHtml);
+          }
+          return;
+        }
+
+        // 1. 새로 추가된 항·호·목 (<신설>)
+        if (!oldCl && newCl) {
+          const marker = newCl.marker ? `${escapeHtml(newCl.marker)} ` : '';
+          const bodyText = escapeHtml(newCl.text);
+          const newContent = `${marker}${bodyText}`.trim();
+          const formattedNew = (options.underlineNewClause && options.underlineNew)
+            ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${newContent}</u>`
+            : `${marker}${options.underlineNew ? `<u class="diff-u" style="text-decoration: underline; text-underline-offset: 3px;">${bodyText}</u>` : bodyText}`;
+
+          oldLines.push(`<div class="clause-line ${levelClass}">${oldHdrPrefix}${escapeHtml(options.newStyle)}</div>`);
+          newLines.push(`<div class="clause-line ${levelClass}">${newHdrPrefix}${formattedNew}</div>`);
+          return;
+        }
+
+        // 2. 삭제된 항·호·목 (<삭제>, (삭제), ----)
+        if (oldCl && !newCl) {
+          const marker = oldCl.marker ? `${escapeHtml(oldCl.marker)} ` : '';
+          const bodyText = escapeHtml(oldCl.text);
+          const delSymbol = escapeHtml(options.deletedStyle);
+
+          oldLines.push(`<div class="clause-line ${levelClass}">${oldHdrPrefix}${marker}${bodyText}</div>`);
+          newLines.push(`<div class="clause-line ${levelClass}">${newHdrPrefix}${marker}${delSymbol}</div>`);
+          return;
+        }
+
+        // 3. 양쪽 모두 존재하며 문장이 똑같은 항·호·목
+        if (oldCl.text.replace(/\s+/g, ' ').trim() === newCl.text.replace(/\s+/g, ' ').trim()) {
+          const marker = oldCl.marker ? `${escapeHtml(oldCl.marker)} ` : '';
+          // 다음 요소가 표(Table)이거나 본문(main)인 경우에는 문맥 이해를 위해 축약하지 않고 그대로 보여줍니다.
+          const nextKey = allKeys[idx + 1];
+          const nextCl = nextKey ? (oldMap.get(nextKey) || newMap.get(nextKey)) : null;
+          if ((oldCl.type === 'main' && allKeys.length > 1) || (nextCl && nextCl.type === 'table')) {
+            const safeText = escapeHtml(oldCl.text);
+            oldLines.push(`<div class="clause-line ${levelClass}">${oldHdrPrefix}${marker}${safeText}</div>`);
+            newLines.push(`<div class="clause-line ${levelClass}">${newHdrPrefix}${marker}${safeText}</div>`);
+            return;
+          }
+
+          if (options.unchangedStyle === 'FULL') {
+            const safeText = escapeHtml(oldCl.text);
+            oldLines.push(`<div class="clause-line ${levelClass}">${oldHdrPrefix}${marker}${safeText}</div>`);
+            newLines.push(`<div class="clause-line ${levelClass}">${newHdrPrefix}${marker}${safeText}</div>`);
+          } else {
+            const newAbbr = escapeHtml(options.unchangedStyle);
+            let oldTextDisplay = '';
+            if (options.unchangedOldStyle === '(생 략)') {
+              oldTextDisplay = '(생 략)';
+            } else if (options.unchangedOldStyle === 'HEADER_ONLY') {
+              oldTextDisplay = '';
+            } else if (options.unchangedOldStyle === 'SAME_AS_NEW') {
+              oldTextDisplay = newAbbr;
+            } else {
+              oldTextDisplay = escapeHtml(oldCl.text);
+            }
+            oldLines.push(`<div class="clause-line ${levelClass}">${oldHdrPrefix}${marker}${oldTextDisplay}</div>`);
+            newLines.push(`<div class="clause-line ${levelClass}">${newHdrPrefix}${marker}${newAbbr}</div>`);
+          }
+          return;
+        }
+
+        // 4. 문장 내용이 일부 바뀐 항·호·목
+        const markerOld = oldCl.marker ? `${escapeHtml(oldCl.marker)} ` : '';
+        const markerNew = newCl.marker ? `${escapeHtml(newCl.marker)} ` : '';
+        const diffRes = diffSentencePair(oldCl.text, newCl.text, options);
+
+        oldLines.push(`<div class="clause-line ${levelClass}">${oldHdrPrefix}${markerOld}${diffRes.oldHtml}</div>`);
+        newLines.push(`<div class="clause-line ${levelClass}">${newHdrPrefix}${markerNew}${diffRes.newHtml}</div>`);
+      });
+
+      return {
+        oldCellHtml: oldLines.join(''),
+        newCellHtml: newLines.join('')
+      };
+    }
+
+    function updateStatsUI(stats) {
+      document.getElementById('statTotal').textContent = stats.total;
+      document.getElementById('statModified').textContent = stats.modified;
+      document.getElementById('statAdded').textContent = stats.added;
+      document.getElementById('statDeleted').textContent = stats.deleted;
+      document.getElementById('statUnchanged').textContent = stats.unchanged;
+    }
+
+    let isEditModeActive = false;
+
+    function renderTableRows(rows) {
+      const tbody = document.getElementById('comparisonTableBody');
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="2" class="text-center py-12 text-slate-400 font-sans">
+              현행(구 조문)과 개정안(신 조문)을 입력하거나 상단 [샘플 불러오기] 버튼을 클릭하세요.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const ceAttr = isEditModeActive ? 'contenteditable="true" spellcheck="false"' : '';
+      tbody.innerHTML = rows.map(row => `
+        <tr>
+          <td ${ceAttr}>${row.oldCellHtml}</td>
+          <td ${ceAttr}>${row.newCellHtml}</td>
+        </tr>
+      `).join('');
+    }
+
+    /* ==========================================================================
+       7. 한글(HWP)·워드 호환 표 복사, 문서 파일 저장 및 직접 편집 기능
+       - 조문 내부의 중첩 표(.inner-legal-table)의 rowspan/colspan 병합 속성과 테두리를 보존합니다.
+       - 본문 대조표와 별도 부칙 대조표를 함께 또는 개별 복사할 수 있습니다.
+       ========================================================================== */
+    function buildSingleSheetOfficeHtml(titleText, tbodyElement, leftHeaderText, rightHeaderText, fontStack) {
+      if (!tbodyElement) return '';
+      const trElements = Array.from(tbodyElement.querySelectorAll(':scope > tr'));
+
+      const rowsHtml = trElements.map(tr => {
+        const tds = Array.from(tr.querySelectorAll(':scope > td'));
+        if (tds.length < 2) return '';
+
+        const formatCellForOffice = (td) => {
+          const clone = td.cloneNode(true);
+          clone.querySelectorAll('u').forEach(u => {
+            u.removeAttribute('class');
+            u.setAttribute('style', 'text-decoration: underline;');
+          });
+
+          const children = Array.from(clone.children);
+          if (children.length > 0) {
+            return children.map(child => {
+              // 1) 조문 내부 중첩 표(.clause-table-wrap)인 경우 rowspan/colspan을 보존하면서 한글/워드용 인라인 테두리 적용
+              if (child.classList.contains('clause-table-wrap')) {
+                const innerTbl = child.querySelector('table');
+                if (innerTbl) {
+                  innerTbl.setAttribute('width', '100%');
+                  innerTbl.setAttribute('border', '1');
+                  innerTbl.setAttribute('cellspacing', '0');
+                  innerTbl.setAttribute('cellpadding', '4');
+                  innerTbl.setAttribute('style', `width: 100%; border-collapse: collapse; border: 1px solid #334155; margin: 6pt 0; font-family: ${fontStack}; font-size: 9.5pt;`);
+                  innerTbl.querySelectorAll('th').forEach(th => {
+                    th.setAttribute('style', `border: 1px solid #334155; background-color: #f1f5f9; padding: 4pt 6pt; text-align: center; vertical-align: middle; font-weight: bold; font-family: ${fontStack}; font-size: 9.5pt;`);
+                  });
+                  innerTbl.querySelectorAll('td').forEach(innerTd => {
+                    innerTd.setAttribute('style', `border: 1px solid #334155; padding: 4pt 6pt; text-align: center; vertical-align: middle; font-family: ${fontStack}; font-size: 9.5pt;`);
+                  });
+                  return innerTbl.outerHTML;
+                }
+              }
+
+              // 2) 일반 조문 문단(.clause-line)인 경우
+              let marginLeft = '0pt';
+              if (child.classList.contains('level-ho')) marginLeft = '12pt';
+              if (child.classList.contains('level-mok')) marginLeft = '22pt';
+              return `<p style="margin: 0 0 4pt ${marginLeft}; line-height: 160%; font-family: ${fontStack}; font-size: 10.5pt; color: #000000; text-align: justify;">${child.innerHTML}</p>`;
+            }).join('');
+          }
+          return `<p style="margin: 0; line-height: 160%; font-family: ${fontStack}; font-size: 10.5pt; color: #000000;">${clone.innerHTML}</p>`;
+        };
+
+        const leftHtml = formatCellForOffice(tds[0]);
+        const rightHtml = formatCellForOffice(tds[1]);
+
+        return `
+          <tr>
+            <td width="50%" valign="top" style="width: 50%; border: 1px solid #000000; padding: 8pt 10pt; vertical-align: top; font-family: ${fontStack}; font-size: 10.5pt; line-height: 160%;">
+              ${leftHtml}
+            </td>
+            <td width="50%" valign="top" style="width: 50%; border: 1px solid #000000; padding: 8pt 10pt; vertical-align: top; font-family: ${fontStack}; font-size: 10.5pt; line-height: 160%;">
+              ${rightHtml}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (!rowsHtml.trim()) return '';
+
+      return `
+        <div style="text-align: center; margin-bottom: 14pt;">
+          <h2 style="font-family: ${fontStack}; font-size: 15pt; font-weight: bold; letter-spacing: 3pt; text-decoration: underline; margin: 0;">${escapeHtml(titleText)}</h2>
+        </div>
+        <table width="100%" cellspacing="0" cellpadding="6" border="1" style="width: 100%; border-collapse: collapse; border: 1.5pt solid #000000; table-layout: fixed; font-family: ${fontStack};">
+          <thead>
+            <tr>
+              <th width="50%" style="width: 50%; border: 1px solid #000000; border-bottom: 1.5pt solid #000000; background-color: #f3f4f6; padding: 8pt; text-align: center; font-weight: bold; font-size: 11pt; font-family: ${fontStack};">${leftHeaderText}</th>
+              <th width="50%" style="width: 50%; border: 1px solid #000000; border-bottom: 1.5pt solid #000000; background-color: #f3f4f6; padding: 8pt; text-align: center; font-weight: bold; font-size: 11pt; font-family: ${fontStack};">${rightHeaderText}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function buildInlineStyledExportHtml(includeFullDocWrapper = false, exportTarget = 'all') {
+      const titleText = document.getElementById('tableDocumentTitle').innerText.trim() || '신·구조문대비표';
+      const addendumTitleEl = document.getElementById('addendumDocumentTitle');
+      const addendumTitleText = addendumTitleEl ? (addendumTitleEl.innerText.trim() || '부칙 신·구조문대비표') : '부칙 신·구조문대비표';
+      const options = getComparisonOptions();
+      const fontStack = options.fontFamily === 'serif'
+        ? "'바탕', '바탕체', 'Batang', 'Noto Serif KR', serif"
+        : "'맑은 고딕', 'Malgun Gothic', 'Pretendard', sans-serif";
+
+      const mainTbody = document.getElementById('comparisonTableBody');
+      const addSheet = document.getElementById('addendumSheetWrapper');
+      const addTbody = document.getElementById('addendumTableBody');
+      const hasAddendum = addSheet && !addSheet.classList.contains('hidden') && addTbody && addTbody.children.length > 0;
+
+      const sections = [];
+      if (exportTarget === 'all' || exportTarget === 'main') {
+        const mainHtml = buildSingleSheetOfficeHtml(
+          titleText,
+          mainTbody,
+          '현 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 행',
+          '개 &nbsp;&nbsp; 정 &nbsp;&nbsp; 안',
+          fontStack
+        );
+        if (mainHtml) sections.push(mainHtml);
+      }
+
+      if ((exportTarget === 'all' || exportTarget === 'addendum') && hasAddendum) {
+        const addHtml = buildSingleSheetOfficeHtml(
+          addendumTitleText,
+          addTbody,
+          '현 &nbsp;&nbsp; 행 &nbsp;&nbsp; 부 &nbsp;&nbsp; 칙',
+          '개 &nbsp;&nbsp; 정 &nbsp;&nbsp; 안 &nbsp;&nbsp; 부 &nbsp;&nbsp; 칙',
+          fontStack
+        );
+        if (addHtml) {
+          sections.push(sections.length > 0 ? `<div style="margin-top: 28pt;">${addHtml}</div>` : addHtml);
+        }
+      }
+
+      const tableCore = sections.join('\n');
+
+      if (!includeFullDocWrapper) {
+        return tableCore;
+      }
+
+      return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(titleText)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 20mm 15mm 20mm 15mm; }
+    body { font-family: ${fontStack}; color: #000000; }
+    table { border-collapse: collapse; width: 100%; }
+    u { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  ${tableCore}
+</body>
+</html>`;
+    }
+
+    async function copyTableToClipboard(exportTarget = 'all') {
+      const htmlSnippet = buildInlineStyledExportHtml(false, exportTarget);
+      if (!htmlSnippet.trim()) {
+        showToast('복사할 대조표 내용이 없습니다.', 'warn');
+        return;
+      }
+
+      const targetTbodyId = exportTarget === 'addendum' ? 'addendumTableBody' : 'comparisonTableBody';
+      const tbody = document.getElementById(targetTbodyId);
+      const plainRows = ['현행\t개정안'];
+      if (tbody) {
+        tbody.querySelectorAll(':scope > tr').forEach(tr => {
+          const tds = tr.querySelectorAll(':scope > td');
+          if (tds.length === 2) {
+            const leftText = tds[0].innerText.replace(/\n+/g, ' ').trim();
+            const rightText = tds[1].innerText.replace(/\n+/g, ' ').trim();
+            plainRows.push(`${leftText}\t${rightText}`);
+          }
+        });
+      }
+      const plainText = plainRows.join('\n');
+
+      let copied = false;
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      tempDiv.style.opacity = '0';
+      tempDiv.innerHTML = htmlSnippet;
+      document.body.appendChild(tempDiv);
+
+      try {
+        const range = document.createRange();
+        range.selectNodeContents(tempDiv);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        copied = document.execCommand('copy');
+        selection.removeAllRanges();
+      } catch (e) {
+        copied = false;
+      } finally {
+        document.body.removeChild(tempDiv);
+      }
+
+      if (!copied && navigator.clipboard && window.ClipboardItem) {
+        try {
+          const blobHtml = new Blob([htmlSnippet], { type: 'text/html' });
+          const blobText = new Blob([plainText], { type: 'text/plain' });
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': blobHtml,
+              'text/plain': blobText
+            })
+          ]);
+          copied = true;
+        } catch (err) {
+          copied = false;
+        }
+      }
+
+      if (copied) {
+        const msg = exportTarget === 'addendum'
+          ? '부칙 신·구조문대비표가 복사되었습니다! 한글(HWP)이나 워드에 바로 붙여넣기(Ctrl+V) 하세요.'
+          : '신·구조문대비표(병합 표·부칙 표 포함)가 복사되었습니다! 한글(HWP)이나 MS Word에 바로 붙여넣기(Ctrl+V) 하세요.';
+        showToast(msg, 'success');
+      } else {
+        showToast('클립보드 복사에 실패했습니다. [한글/워드(.doc) 저장] 버튼을 이용해 주세요.', 'error');
+      }
+    }
+
+    function downloadFile(content, filename, mimeType) {
+      const blob = new Blob(['\uFEFF', content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 150);
+    }
+
+    /* ==========================================================================
+       8. 스마트 표 붙여넣기(Ctrl+V), 파일 업로드 이벤트 및 초기 실행
+       ========================================================================== */
+    // 한글/워드/엑셀에서 표(병합 셀 포함)가 포함된 내용을 붙여넣을 때 자동으로 '| 칸1 | ^^ | << |' 형식으로 변환
+    function setupSmartTablePaste(textarea) {
+      if (!textarea) return;
+      textarea.addEventListener('paste', (e) => {
+        if (!e.clipboardData) return;
+        const htmlData = e.clipboardData.getData('text/html');
+        const plainData = e.clipboardData.getData('text/plain');
+
+        let convertedText = null;
+
+        // 1) 클립보드에 HTML <table>이 들어 있는 경우 (한글 HWP, MS 워드, 엑셀, 웹페이지 표 복사 시 병합 셀 자동 반영)
+        if (htmlData && /<table[\s>]/i.test(htmlData)) {
+          convertedText = convertHtmlWithTablesToPipeText(htmlData);
+        } else if (plainData && plainData.includes('\t')) {
+          // 2) 탭(\t)으로 구분된 표 텍스트인 경우
+          const lines = plainData.split(/\r?\n/);
+          const tabLineCount = lines.filter(l => l.includes('\t')).length;
+          if (tabLineCount >= 1) {
+            convertedText = lines.map(l => {
+              if (l.includes('\t')) {
+                const cells = l.split('\t').map(c => c.trim());
+                return `| ${cells.join(' | ')} |`;
+              }
+              return l;
+            }).join('\n');
+          }
+        }
+
+        if (convertedText) {
+          e.preventDefault();
+          const start = textarea.selectionStart || 0;
+          const end = textarea.selectionEnd || 0;
+          const currentVal = textarea.value;
+          textarea.value = currentVal.slice(0, start) + convertedText + currentVal.slice(end);
+          textarea.selectionStart = textarea.selectionEnd = start + convertedText.length;
+          buildComparisonResult();
+          showToast('붙여넣은 내용에서 표(병합 셀 포함)를 인식하여 표 비교 형식으로 자동 변환했습니다!', 'success');
+        }
+      });
+    }
+
+    // [+ 표 양식 넣기] 버튼 클릭 시 커서 위치에 병합 셀 예시가 포함된 기본 표 양식을 넣어주는 함수
+    function insertSampleTableAtCursor(textarea) {
+      const sampleTable = `\n| 구분 | 대상 항목 | 인정 기준 | 비고 |\n| 공통사항 | 항목 1 | 기준 A | 상세 설명 |\n| ^^ | 항목 2 | 기준 B | 상세 설명 |\n| 개별사항 | 항목 3 | << | 가로병합 예시 |\n`;
+      const start = textarea.selectionStart || textarea.value.length;
+      const end = textarea.selectionEnd || textarea.value.length;
+      const val = textarea.value;
+      textarea.value = val.slice(0, start) + sampleTable + val.slice(end);
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + sampleTable.length;
+      buildComparisonResult();
+      showToast('병합 기호(^^ 세로병합, << 가로병합) 예시가 포함된 표 양식이 삽입되었습니다.', 'info');
+    }
+
+    function setupFileUploadZone(side) {
+      const isOld = side === 'old';
+      const fileInput = document.getElementById(isOld ? 'oldFileInput' : 'newFileInput');
+      const dropZone = document.getElementById(isOld ? 'oldDropZone' : 'newDropZone');
+      const textArea = document.getElementById(isOld ? 'oldTextInput' : 'newTextInput');
+      const statusBox = document.getElementById(isOld ? 'oldFileStatus' : 'newFileStatus');
+      const fileNameEl = document.getElementById(isOld ? 'oldFileName' : 'newFileName');
+      const fileMetaEl = document.getElementById(isOld ? 'oldFileMeta' : 'newFileMeta');
+
+      async function handleFile(file) {
+        if (!file) return;
+        statusBox.classList.remove('hidden');
+        fileNameEl.textContent = file.name;
+        fileMetaEl.textContent = '문서 분석 및 텍스트·표·부칙 추출 중...';
+        fileMetaEl.classList.remove('text-rose-600', 'whitespace-normal', 'break-words');
+        fileMetaEl.classList.add('text-blue-600');
+        fileMetaEl.removeAttribute('title');
+
+        try {
+          const extracted = await extractTextFromFile(file);
+          if (!extracted.trim()) {
+            throw new Error('파일에서 추출된 본문 텍스트가 없습니다.');
+          }
+          // 업로드한 문서 전체(본문 + 부칙)를 입력창에 넣으면 비교 시 부칙이 자동으로 분리되어 별도 비교표로 작성됩니다.
+          textArea.value = extracted;
+          buildComparisonResult();
+          const { mainText, addendumText } = splitMainAndAddendumText(extracted);
+          const count = parseLegalText(mainText, getComparisonOptions().granularity).length;
+          const addNote = addendumText ? ' + 부칙 자동 분리됨' : '';
+          fileMetaEl.textContent = `추출 완료 (${count}개 조문 인식${addNote})`;
+          showToast(`[${isOld ? '현행' : '개정안'}] "${file.name}"에서 ${count}개 조문${addNote}을 불러왔습니다.`, 'success');
+        } catch (err) {
+          const detail = err && err.message ? err.message : String(err || '파일을 읽는 중 오류가 발생했습니다.');
+          fileMetaEl.textContent = '오류: ' + detail;
+          fileMetaEl.title = detail;
+          fileMetaEl.classList.remove('text-blue-600');
+          fileMetaEl.classList.add('text-rose-600', 'whitespace-normal', 'break-words');
+          showToast(detail, 'error');
+        }
+      }
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleFile(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    function loadSelectedSample() {
+      const presetKey = document.getElementById('samplePresetSelect').value;
+      const sample = SAMPLE_PRESETS[presetKey] || SAMPLE_PRESETS.law;
+
+      // 본문과 부칙을 하나의 입력창에 함께 넣어주면 자동으로 본문과 부칙을 감지해 별도 표로 분리합니다.
+      const fullOldText = [sample.oldText || '', sample.oldAddendum || ''].filter(Boolean).join('\n\n');
+      const fullNewText = [sample.newText || '', sample.newAddendum || ''].filter(Boolean).join('\n\n');
+
+      document.getElementById('oldTextInput').value = fullOldText;
+      document.getElementById('newTextInput').value = fullNewText;
+
+      document.getElementById('tableDocumentTitle').textContent = sample.title;
+      document.getElementById('oldFileStatus').classList.add('hidden');
+      document.getElementById('newFileStatus').classList.add('hidden');
+
+      buildComparisonResult();
+      showToast('샘플 조문 데이터(병합 표 및 부칙 자동 분리 포함)가 로드되었습니다.', 'info');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) window.lucide.createIcons();
+
+      const oldTextArea = document.getElementById('oldTextInput');
+      const newTextArea = document.getElementById('newTextInput');
+
+      // 좌우 파일 업로드 및 스마트 표 붙여넣기(Ctrl+V) 활성화
+      setupFileUploadZone('old');
+      setupFileUploadZone('new');
+      setupSmartTablePaste(oldTextArea);
+      setupSmartTablePaste(newTextArea);
+
+      // [+ 표 양식 넣기] 버튼 이벤트 연결
+      document.getElementById('insertOldTableBtn').addEventListener('click', () => insertSampleTableAtCursor(oldTextArea));
+      document.getElementById('insertNewTableBtn').addEventListener('click', () => insertSampleTableAtCursor(newTextArea));
+
+      // 텍스트 입력 시 실시간으로 표가 자동 갱신되도록 디바운스(Debounce) 연결
+      let debounceTimer = null;
+      const triggerDebouncedCompare = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(buildComparisonResult, 220);
+      };
+
+      oldTextArea.addEventListener('input', triggerDebouncedCompare);
+      newTextArea.addEventListener('input', triggerDebouncedCompare);
+
+      // 개별 비우기 버튼
+      document.getElementById('clearOldBtn').addEventListener('click', () => {
+        oldTextArea.value = '';
+        document.getElementById('oldFileStatus').classList.add('hidden');
+        buildComparisonResult();
+        showToast('현행(구 조문) 입력란을 비웠습니다.', 'info');
+      });
+
+      document.getElementById('clearNewBtn').addEventListener('click', () => {
+        newTextArea.value = '';
+        document.getElementById('newFileStatus').classList.add('hidden');
+        buildComparisonResult();
+        showToast('개정안(신 조문) 입력란을 비웠습니다.', 'info');
+      });
+
+      // 전체 초기화 버튼
+      document.getElementById('resetAllBtn').addEventListener('click', () => {
+        oldTextArea.value = '';
+        newTextArea.value = '';
+        document.getElementById('oldFileStatus').classList.add('hidden');
+        document.getElementById('newFileStatus').classList.add('hidden');
+        document.getElementById('tableDocumentTitle').textContent = '신·구조문대비표';
+        buildComparisonResult();
+        showToast('모든 입력 내용과 표가 초기화되었습니다.', 'info');
+      });
+
+      // 샘플 불러오기 버튼 연결
+      document.getElementById('loadSampleBtn').addEventListener('click', loadSelectedSample);
+      document.getElementById('samplePresetSelect').addEventListener('change', loadSelectedSample);
+      document.getElementById('quickSchoolSampleBtn').addEventListener('click', () => {
+        document.getElementById('samplePresetSelect').value = 'school';
+        loadSelectedSample();
+      });
+
+      // 배포 안내 모달창 열기/닫기
+      const deployModal = document.getElementById('deployGuideModal');
+      const openDeployModal = () => deployModal.classList.remove('hidden');
+      const closeDeployModal = () => deployModal.classList.add('hidden');
+      document.getElementById('openDeployModalBtn').addEventListener('click', openDeployModal);
+      document.getElementById('closeDeployModalBtn').addEventListener('click', closeDeployModal);
+      document.getElementById('closeDeployModalBottomBtn').addEventListener('click', closeDeployModal);
+      deployModal.addEventListener('click', (e) => {
+        if (e.target === deployModal) closeDeployModal();
+      });
+
+      // 옵션 변경 시 즉시 표 다시 생성
+      const optionIds = [
+        'optRevisionType', 'optUnchangedStyle', 'optUnchangedOldStyle',
+        'optDeletedStyle', 'optInlineDeleteStyle', 'optNewStyle',
+        'optGranularity', 'optFontFamily',
+        'chkUnderlineNew', 'chkUnderlineOld', 'chkUnderlineNewClause',
+        'chkHideUnchangedArticles', 'chkColorHighlight'
+      ];
+      optionIds.forEach(id => {
+        document.getElementById(id).addEventListener('change', buildComparisonResult);
+      });
+
+      document.getElementById('generateTableBtn').addEventListener('click', () => {
+        buildComparisonResult();
+        showToast('신·구조문대비표 및 부칙 대비표가 최신 설정으로 갱신되었습니다.', 'success');
+      });
+
+      // 표 직접 편집 모드 켜기/끄기 (본문 표 + 부칙 표 동시 적용)
+      const toggleEditBtn = document.getElementById('toggleEditModeBtn');
+      const editModeLabel = document.getElementById('editModeLabel');
+      const editModeBanner = document.getElementById('editModeBanner');
+      const selectionUnderlineBtn = document.getElementById('selectionUnderlineBtn');
+      const comparisonTable = document.getElementById('comparisonTable');
+      const addendumTable = document.getElementById('addendumComparisonTable');
+
+      toggleEditBtn.addEventListener('click', () => {
+        isEditModeActive = !isEditModeActive;
+        comparisonTable.classList.toggle('editable-active', isEditModeActive);
+        if (addendumTable) addendumTable.classList.toggle('editable-active', isEditModeActive);
+        editModeBanner.classList.toggle('hidden', !isEditModeActive);
+        selectionUnderlineBtn.classList.toggle('hidden', !isEditModeActive);
+        selectionUnderlineBtn.classList.toggle('inline-flex', isEditModeActive);
+
+        editModeLabel.textContent = isEditModeActive ? '표 직접 편집: 켬' : '표 직접 편집: 끔';
+        toggleEditBtn.classList.toggle('bg-blue-600', isEditModeActive);
+        toggleEditBtn.classList.toggle('text-white', isEditModeActive);
+        toggleEditBtn.classList.toggle('text-slate-700', !isEditModeActive);
+
+        const tds = document.querySelectorAll('#comparisonTable > tbody > tr > td, #addendumComparisonTable > tbody > tr > td');
+        tds.forEach(td => {
+          if (isEditModeActive) {
+            td.setAttribute('contenteditable', 'true');
+            td.setAttribute('spellcheck', 'false');
+          } else {
+            td.removeAttribute('contenteditable');
+          }
+        });
+
+        showToast(
+          isEditModeActive
+            ? '직접 편집 모드가 켜졌습니다. 본문 표와 부칙 표의 셀을 클릭하여 직접 수정하세요.'
+            : '직접 편집 모드가 종료되었습니다.',
+          'info'
+        );
+      });
+
+      // 마우스로 드래그한 텍스트에 밑줄 넣기/빼기
+      selectionUnderlineBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        document.execCommand('underline', false, null);
+      });
+
+      // 본문+부칙 전체 표 복사 및 부칙 단독 표 복사 버튼 연결
+      document.getElementById('copyTableBtn').addEventListener('click', () => copyTableToClipboard('all'));
+      const copyAddendumBtn = document.getElementById('copyAddendumTableBtn');
+      if (copyAddendumBtn) {
+        copyAddendumBtn.addEventListener('click', () => copyTableToClipboard('addendum'));
+      }
+
+      document.getElementById('downloadDocBtn').addEventListener('click', () => {
+        const htmlDoc = buildInlineStyledExportHtml(true, 'all');
+        const title = document.getElementById('tableDocumentTitle').innerText.trim() || '신구조문대비표';
+        const safeName = title.replace(/[\\/:*?"<>|]/g, '_') + '.doc';
+        downloadFile(htmlDoc, safeName, 'application/msword;charset=utf-8');
+        showToast(`"${safeName}" 파일이 다운로드되었습니다. 한글(HWP) 또는 MS Word에서 바로 열 수 있습니다.`, 'success');
+      });
+
+      document.getElementById('downloadHtmlBtn').addEventListener('click', () => {
+        const htmlDoc = buildInlineStyledExportHtml(true, 'all');
+        const title = document.getElementById('tableDocumentTitle').innerText.trim() || '신구조문대비표';
+        const safeName = title.replace(/[\\/:*?"<>|]/g, '_') + '.html';
+        downloadFile(htmlDoc, safeName, 'text/html;charset=utf-8');
+        showToast(`"${safeName}" 파일이 다운로드되었습니다.`, 'success');
+      });
+
+      document.getElementById('printBtn').addEventListener('click', () => {
+        window.print();
+      });
+
+      // 처음 화면이 열릴 때 추천 샘플(학교 규정, 학칙 일부개정안 - 제7조 병합 표 및 별도 부칙 비교 포함)이 자동으로 로드됩니다.
+      loadSelectedSample();
+    });
